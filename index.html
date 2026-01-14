@@ -488,12 +488,15 @@
                 const stage = row.querySelector('.stage-select').value;
                 const stress = parseFloat(row.querySelector('.stress-cell').textContent);
                 const sett = parseFloat(row.querySelector('.settlement-input').value);
+                
                 if (!isNaN(stress) && !isNaN(sett)) {
                     const pt = { x: stress, y: sett };
-                    if (stage === 'Loading') loadingData.push(pt); else unloadingData.push(pt);
+                    if (stage === 'Loading') loadingData.push(pt); 
+                    else unloadingData.push(pt);
                 }
             });
 
+            // الترتيب عشان الخط يترسم صح
             loadingData.sort((a,b) => a.x - b.x);
             unloadingData.sort((a,b) => b.x - a.x);
 
@@ -505,40 +508,69 @@
                 data: {
                     datasets: [
                         {
-                            label: 'Loading', data: loadingData,
-                            borderColor: '#0066cc', backgroundColor: '#0066cc',
-                            pointStyle: 'rectRot', pointRadius: 6, borderWidth: 2, tension: 0, fill: false
+                            label: 'Loading', 
+                            data: loadingData,
+                            // --- التعديلات هنا (أحمر وأزرق غامق) ---
+                            borderColor: '#1F4E79',       // أزرق غامق للخط
+                            backgroundColor: '#C00000',   // أحمر للنقطة
+                            pointBackgroundColor: '#C00000', 
+                            pointBorderColor: '#C00000',
+                            pointStyle: 'rectRot',        // شكل معين
+                            pointRadius: 5,
+                            borderWidth: 2,
+                            tension: 0,
+                            fill: false
                         },
                         {
-                            label: 'Unloading', data: unloadingData,
-                            borderColor: '#0066cc', backgroundColor: '#fff',
-                            pointBorderColor: '#0066cc', pointStyle: 'rectRot', pointRadius: 6, 
-                            borderWidth: 2, borderDash: [5,5], tension: 0, fill: false
+                            label: 'Unloading', 
+                            data: unloadingData,
+                            // --- الخط الراجع (متصل ولونه أزرق) ---
+                            borderColor: '#1F4E79',       // نفس الأزرق
+                            backgroundColor: '#C00000',   // نفس الأحمر
+                            pointBackgroundColor: '#C00000',
+                            pointBorderColor: '#C00000',
+                            pointStyle: 'rectRot',
+                            pointRadius: 5,
+                            borderWidth: 2,
+                            borderDash: [],               // << شيلنا التنقيط عشان يبقى متصل Solid
+                            tension: 0,
+                            fill: false
                         }
                     ]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false,
+                    responsive: true, 
+                    maintainAspectRatio: false,
                     layout: { padding: { top: 30, right: 30, left: 10, bottom: 10 } },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { enabled: false }, // إخفاء التلميح
-                        datalabels: { // إظهار الأرقام
-                            display: true, align: 'right', anchor: 'center', offset: 6,
-                            color: '#000', font: { weight: 'bold', size: 11 },
+                        tooltip: { enabled: false },
+                        datalabels: {
+                            display: true, 
+                            align: 'right', 
+                            anchor: 'center', 
+                            offset: 6,
+                            color: '#000',
+                            font: { weight: 'bold', size: 11 },
                             formatter: (v) => v.y.toFixed(3)
                         }
                     },
                     scales: {
                         x: {
-                            type: 'linear', position: 'top', // المحور فوق
-                            title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold'} },
-                            min: 0, grid: { color: '#999' }
+                            type: 'linear', 
+                            position: 'top',
+                            title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' },
+                            min: 0, 
+                            max: 4.5,
+                            grid: { color: '#000', lineWidth: 0.5 }, // الشبكة سوداء
+                            ticks: { color: '#000', font: {weight:'bold'} }
                         },
                         y: {
-                            reverse: true, // المحور مقلوب (0 فوق)
-                            title: { display: true, text: 'Settlement (mm)', font: {weight:'bold'} },
-                            min: 0, grid: { color: '#999' }
+                            reverse: true,
+                            title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' },
+                            min: 0,
+                            grid: { color: '#000', lineWidth: 0.5 }, // الشبكة سوداء
+                            ticks: { color: '#000', font: {weight:'bold'} }
                         }
                     }
                 }
@@ -552,3 +584,4 @@
     </script>
 </body>
 </html>
+
