@@ -9,14 +9,41 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* --- تنسيقات الطباعة (تم التعديل لإظهار كافة الجداول) --- */
         @media print {
             .no-print { display: none !important; }
-            .tab-content { display: block !important; }
-            body { font-size: 10pt; }
+            
+            /* إجبار إظهار جميع محتويات التبويبات */
+            .tab-content { 
+                display: block !important; 
+                opacity: 1 !important; 
+                visibility: visible !important;
+                height: auto !important;
+                overflow: visible !important;
+            }
+
+            /* إخفاء أزرار التنقل داخل التبويبات في الطباعة */
+            .nav-buttons { display: none !important; }
+
+            /* ضبط فواصل الصفحات */
             .page-break { page-break-before: always; }
-            table { page-break-inside: avoid; }
-            .print-compact { padding: 0.25rem !important; }
+            
+            /* منع قص الجداول بين الصفحات */
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            
+            /* تقليل الحواشي في الطباعة */
+            body { padding: 0 !important; margin: 0 !important; font-size: 10pt; }
+            .report-container { box-shadow: none; max-width: 100%; width: 100%; margin: 0; padding: 0; }
+            
+            /* إخفاء شريط التبويبات العلوي */
             .tabs-nav { display: none !important; }
+            
+            /* فاصل صفحة بعد كل قسم رئيسي */
+            #tab1Content, #tab2Content {
+                page-break-after: always;
+                border-bottom: none !important;
+            }
         }
         
         body {
@@ -29,13 +56,6 @@
             margin: 0 auto;
             background: white;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        
-        @media print {
-            .report-container {
-                box-shadow: none;
-                max-width: 100%;
-            }
         }
         
         table { border-collapse: collapse; width: 100%; }
