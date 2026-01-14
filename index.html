@@ -93,15 +93,29 @@
 </head>
 <body class="p-4">
     <div class="report-container p-8">
-        <div class="header-logo mb-6">
-            <h1>
-                <span class="ar-text">تقرير اختبار تحميل اللوح</span>
-                <small class="en-sub" style="font-size: 0.7em;">PLATE LOAD TEST REPORT</small>
-            </h1>
-            <h2>
-                <span class="ar-text" style="font-weight: 600;">وفقاً للمواصفة ASTM D1194</span>
-                <small class="en-sub">According to ASTM D1194</small>
-            </h2>
+       <div class="header-logo mb-6 flex items-center justify-between relative">
+            <div class="w-1/4 flex justify-center items-center">
+                <img id="companyLogo" src="https://via.placeholder.com/150x80?text=Logo" alt="Company Logo" class="max-h-24 object-contain hidden">
+                <div class="no-print text-center" id="uploadLogoBtnContainer">
+                    <label for="logoInput" class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded inline-block text-xs">
+                        📷 رفع لوجو<br>Upload Logo
+                    </label>
+                    <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="loadLogo(event)">
+                </div>
+            </div>
+
+            <div class="w-2/4 text-center">
+                <h1>
+                    <span class="ar-text text-xl">تقرير اختبار تحميل اللوح</span>
+                    <small class="en-sub text-sm">PLATE LOAD TEST REPORT</small>
+                </h1>
+                <h2 class="text-lg text-gray-600">
+                    <span class="ar-text">وفقاً للمواصفة ASTM D1194</span>
+                    <small class="en-sub">According to ASTM D1194</small>
+                </h2>
+            </div>
+
+            <div class="w-1/4"></div>
         </div>
 
         <div class="no-print mb-4 flex gap-2 justify-center flex-wrap">
@@ -584,4 +598,5 @@
     </script>
 </body>
 </html>
+
 
