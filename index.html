@@ -300,9 +300,26 @@
                 <tbody id="summaryBody"></tbody>
             </table>
 
-            <div class="section-title page-break mt-6"><span class="ar-text">ج- المنحنيات</span><small class="en-sub">C- CURVES (Stress vs Settlement)</small></div>
+           <div class="section-title page-break mt-6"><span class="ar-text">ج- المنحنيات</span><small class="en-sub">C- CURVES (Stress vs Settlement)</small></div>
+            
             <div class="mt-4 p-4 border border-gray-300" style="height: 500px;">
                 <canvas id="stressSettlementChart"></canvas>
+            </div>
+
+            <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center shadow-sm">
+                <h3 class="text-indigo-900 font-bold text-lg mb-2">
+                    <span class="ar-text">معامل رد فعل التربة (K-Value)</span>
+                    <small class="en-sub block font-normal text-sm">Modulus of Subgrade Reaction</small>
+                </h3>
+                <div class="flex justify-center items-baseline gap-2 dir-ltr">
+                    <span class="text-gray-600 font-bold">K = </span>
+                    <span id="kValueResult" class="text-4xl font-bold text-indigo-700">0.00</span>
+                    <span class="text-gray-500 font-bold">kg/cm³</span>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">
+                    * Calculated based on maximum loading point (P/Δ)
+                    <br> * يتم الحساب بناءً على أقصى نقطة تحميل (الإجهاد / الهبوط بالسم)
+                </p>
             </div>
 
             <div class="nav-buttons no-print">
@@ -631,7 +648,27 @@
             localStorage.setItem('plateTestBackup', JSON.stringify(data));
             alert('✅ تم حفظ البيانات مؤقتاً!');
         }
-
+        function calculateKValue(loadingData) {
+            if (!loadingData || loadingData.length === 0) {
+                document.getElementById('kValueResult').textContent = "0.00";
+                return;
+            }
+            // 1. نجيب آخر نقطة في التحميل (أقصى إجهاد)
+            const lastPoint = loadingData[loadingData.length - 1];
+            const stress = lastPoint.x; // kg/cm2
+            const settlementMM = lastPoint.y; // mm
+            
+            if (settlementMM > 0) {
+                // 2. التحويل لـ سم (القسمة على 10)
+                const settlementCM = settlementMM / 10;
+                // 3. الحساب (Stress / Settlement_cm)
+                const kVal = stress / settlementCM;
+                // 4. العرض
+                document.getElementById('kValueResult').textContent = kVal.toFixed(2);
+            } else {
+                document.getElementById('kValueResult').textContent = "0.00";
+            }
+        }
         function getTableData(tableId) {
             const rows = [];
             document.querySelectorAll(`#${tableId}Body tr`).forEach(tr => {
@@ -710,6 +747,7 @@
     </script>
 </body>
 </html>
+
 
 
 
