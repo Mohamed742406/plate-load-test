@@ -590,13 +590,109 @@
                 }
             });
         }
+        // --- دوال الحفظ والاسترجاع (Save & Load System) ---
 
+        function saveToLocal() {
+            const data = {
+                project: {
+                    name: document.getElementById('projectName').value,
+                    order: document.getElementById('orderNo').value,
+                    client: document.getElementById('client').value,
+                    date: document.getElementById('testDate').value,
+                    location: document.getElementById('location').value,
+                    reportDate: document.getElementById('reportDate').value,
+                    plateDiameter: document.getElementById('plateDiameter').value,
+                    ramFactor: document.getElementById('ramFactor').value
+                },
+                loadingTables: {},
+                unloadingTables: {}
+            };
+
+            for (let i = 1; i <= 6; i++) data.loadingTables[`loading${i}`] = getTableData(`loading${i}`);
+            for (let i = 1; i <= 3; i++) data.unloadingTables[`unloading${i}`] = getTableData(`unloading${i}`);
+
+            localStorage.setItem('plateTestBackup', JSON.stringify(data));
+            alert('✅ تم حفظ البيانات مؤقتاً!');
+        }
+
+        function getTableData(tableId) {
+            const rows = [];
+            document.querySelectorAll(`#${tableId}Body tr`).forEach(tr => {
+                rows.push({
+                    time: tr.querySelector('td:nth-child(1) input').value,
+                    mpa: tr.querySelector('.mpa-input').value,
+                    g1: tr.querySelectorAll('.gauge-input')[0].value,
+                    g2: tr.querySelectorAll('.gauge-input')[1].value,
+                    g3: tr.querySelectorAll('.gauge-input')[2].value,
+                    temp: tr.querySelector('td:nth-child(10) input').value
+                });
+            });
+            return rows;
+        }
+
+        function loadFromLocal() {
+            const json = localStorage.getItem('plateTestBackup');
+            if (!json) { alert('❌ لا توجد بيانات محفوظة!'); return; }
+            if(!confirm('استرجاع البيانات المحفوظة؟ (سيتم مسح البيانات الحالية)')) return;
+
+            const data = JSON.parse(json);
+            
+            // استرجاع بيانات المشروع
+            document.getElementById('projectName').value = data.project.name;
+            document.getElementById('orderNo').value = data.project.order;
+            document.getElementById('client').value = data.project.client;
+            document.getElementById('testDate').value = data.project.date;
+            document.getElementById('location').value = data.project.location;
+            document.getElementById('reportDate').value = data.project.reportDate;
+            document.getElementById('plateDiameter').value = data.project.plateDiameter;
+            document.getElementById('ramFactor').value = data.project.ramFactor;
+            calculatePlateArea();
+
+            // دالة مساعدة لبناء الصفوف
+            const restore = (id, rows) => {
+                const body = document.getElementById(`${id}Body`);
+                body.innerHTML = ''; 
+                rowCounters[id] = 0;
+                if(rows) rows.forEach(r => {
+                    id.includes('unloading') ? addUnloadingRow(id) : addLoadingRow(id);
+                    const tr = body.lastElementChild;
+                    tr.querySelector('td:nth-child(1) input').value = r.time;
+                    tr.querySelector('.mpa-input').value = r.mpa;
+                    tr.querySelectorAll('.gauge-input')[0].value = r.g1;
+                    tr.querySelectorAll('.gauge-input')[1].value = r.g2;
+                    tr.querySelectorAll('.gauge-input')[2].value = r.g3;
+                    tr.querySelector('td:nth-child(10) input').value = r.temp;
+                    calculateRow(tr.querySelector('.mpa-input'));
+                });
+            };
+
+            for (let i = 1; i <= 6; i++) restore(`loading${i}`, data.loadingTables[`loading${i}`]);
+            for (let i = 1; i <= 3; i++) restore(`unloading${i}`, data.unloadingTables[`unloading${i}`]);
+
+            autoFillSummary();
+            alert('✅ تم الاسترجاع!');
+        }
         function removeRow(id) { document.getElementById(id)?.remove(); }
         function removeLastRow(id) { const b = document.getElementById(id); if(b.lastChild) b.removeChild(b.lastChild); }
         function resetNewTest() { if(confirm('حذف كل البيانات؟')) location.reload(); }
         function calculateAllResults() { autoFillSummary(); alert('تم الحساب والتحديث'); }
+        // --- دالة رفع وعرض اللوجو ---
+        function loadLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = document.getElementById('companyLogo');
+                    img.src = e.target.result;
+                    img.classList.remove('hidden'); // إظهار الصورة
+                    document.getElementById('uploadLogoBtnContainer').style.display = 'none'; // إخفاء زر الرفع عشان الشكل
+                };
+                reader.readAsDataURL(file);
+            }
+        }
     </script>
 </body>
 </html>
+
 
 
