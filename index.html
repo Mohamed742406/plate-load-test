@@ -3,62 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تقرير اختبار تحميل اللوح | Plate Load Test Report (ASTM D1194)</title>
+    <title>Platform: Plate Load Test (ASTM & DIN)</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script> 
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- تنسيقات الطباعة (تم التعديل لإظهار كافة الجداول) --- */
-        @media print {
-            .no-print { display: none !important; }
-            
-            /* إجبار إظهار جميع محتويات التبويبات */
-            .tab-content { 
-                display: block !important; 
-                opacity: 1 !important; 
-                visibility: visible !important;
-                height: auto !important;
-                overflow: visible !important;
-            }
+        /* --- أنماط الطباعة والواجهة --- */
+        body { font-family: 'Cairo', 'Times New Roman', Times, serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+        
+        /* شريط التنقل العلوي (جديد) */
+        .main-nav { background: #2c3e50; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: sticky; top:0; z-index: 1000; }
+        .std-btn { 
+            background: transparent; color: #ecf0f1; border: 2px solid #ecf0f1; 
+            padding: 8px 25px; margin: 0 10px; border-radius: 30px; 
+            font-weight: bold; cursor: pointer; transition: all 0.3s; font-size: 1.1em;
+        }
+        .std-btn:hover, .std-btn.active { background: #e67e22; color: white; border-color: #e67e22; transform: scale(1.05); }
 
-            /* إخفاء أزرار التنقل داخل التبويبات في الطباعة */
-            .nav-buttons { display: none !important; }
+        /* إخفاء وإظهار الواجهات */
+        .view-section { display: none; animation: fadeIn 0.5s; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-            /* ضبط فواصل الصفحات */
-            .page-break { page-break-before: always; }
-            
-            /* منع قص الجداول بين الصفحات */
-            table { page-break-inside: auto; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-            
-            /* تقليل الحواشي في الطباعة */
-            body { padding: 0 !important; margin: 0 !important; font-size: 10pt; }
-            .report-container { box-shadow: none; max-width: 100%; width: 100%; margin: 0; padding: 0; }
-            
-            /* إخفاء شريط التبويبات العلوي */
-            .tabs-nav { display: none !important; }
-            
-            /* فاصل صفحة بعد كل قسم رئيسي */
-            #tab1Content, #tab2Content {
-                page-break-after: always;
-                border-bottom: none !important;
-            }
-        }
+        .report-container { max-width: 210mm; margin: 30px auto; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.1); padding: 40px; }
         
-        body {
-            font-family: 'Cairo', 'Times New Roman', Times, serif;
-            background-color: #f5f5f5;
-        }
-        
-        .report-container {
-            max-width: 210mm;
-            margin: 0 auto;
-            background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-        
-        table { border-collapse: collapse; width: 100%; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
         th, td { border: 1px solid #333; padding: 6px 8px; text-align: center; font-size: 12px; vertical-align: middle; }
         th { background-color: #e8e8e8; font-weight: bold; line-height: 1.4; }
         
@@ -97,7 +69,6 @@
         
         .tab-content { display: none; padding: 20px 0; animation: fadeIn 0.3s ease; }
         .tab-content.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
         .nav-buttons { display: flex; justify-content: space-between; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e9ecef; }
         .load-step-title { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 15px; border-radius: 5px; margin: 15px 0 10px 0; text-align: center; display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -107,289 +78,379 @@
         .plate-info-box input { background: rgba(255,255,255,0.9); border: none; border-radius: 4px; padding: 8px 12px; text-align: center; font-weight: bold; font-size: 1.1em; color: #333; }
         .global-actions { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); border-radius: 8px; padding: 15px; margin: 15px 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
         
-        /* New styling for MPa input */
         .mpa-input { background-color: #fffde7 !important; border-bottom: 1px dashed #fbc02d !important; }
+
+        @media print {
+            .no-print, .main-nav { display: none !important; }
+            .view-section { display: none; }
+            .view-section.active { display: block !important; }
+            .tab-content { display: block !important; opacity: 1 !important; visibility: visible !important; height: auto !important; overflow: visible !important; }
+            .nav-buttons { display: none !important; }
+            .page-break { page-break-before: always; }
+            table { page-break-inside: auto; }
+            tr { page-break-inside: avoid; page-break-after: auto; }
+            body { padding: 0 !important; margin: 0 !important; font-size: 10pt; }
+            .report-container { box-shadow: none; max-width: 100%; width: 100%; margin: 0; padding: 0; }
+            .tabs-nav { display: none !important; }
+            #tab1Content, #tab2Content { page-break-after: always; border-bottom: none !important; }
+        }
+        
+        /* تنسيقات DIN الجديدة */
+        .din-header { border-bottom: 4px solid #e67e22; padding-bottom: 10px; margin-bottom: 20px; }
+        .din-result-box { background: #fff3e0; border: 2px solid #e67e22; border-radius: 10px; padding: 15px; text-align: center; margin-top: 20px; }
+        .cycle-header { background: #e67e22; color: white; padding: 5px; font-weight: bold; margin-top: 15px; border-radius: 4px; text-align: center; }
     </style>
 </head>
-<body class="p-4">
-    <div class="report-container p-8">
-        <div class="header-logo mb-6 flex items-center justify-between relative">
-            <div class="w-1/4 flex justify-center items-center">
-                <img id="companyLogo" src="#" alt="Company Logo" class="max-h-24 object-contain hidden">
-                <div class="no-print text-center" id="uploadLogoBtnContainer">
-                    <label for="logoInput" class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded inline-block text-xs">
-                        📷 رفع لوجو<br>Upload Logo
-                    </label>
-                    <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="loadLogo(event)">
+<body>
+
+    <div class="main-nav no-print">
+        <button class="std-btn active" onclick="switchStandard('ASTM')">ASTM D1194</button>
+        <button class="std-btn" onclick="switchStandard('DIN')">DIN 18134</button>
+    </div>
+
+    <div id="view-ASTM" class="view-section active">
+        <div class="report-container p-8">
+            <div class="header-logo mb-6 flex items-center justify-between relative">
+                <div class="w-1/4 flex justify-center items-center">
+                    <img id="companyLogo" src="#" alt="Company Logo" class="max-h-24 object-contain hidden">
+                    <div class="no-print text-center" id="uploadLogoBtnContainer">
+                        <label for="logoInput" class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded inline-block text-xs">
+                            📷 رفع لوجو<br>Upload Logo
+                        </label>
+                        <input type="file" id="logoInput" accept="image/*" class="hidden" onchange="loadLogo(event, 'ASTM')">
+                    </div>
                 </div>
-            </div>
-
-            <div class="w-2/4 text-center">
-                <h1>
-                    <span class="ar-text text-xl">تقرير اختبار تحميل اللوح</span>
-                    <small class="en-sub text-sm">PLATE LOAD TEST REPORT</small>
-                </h1>
-                <h2 class="text-lg text-gray-600">
-                    <span class="ar-text">وفقاً للمواصفة ASTM D1194</span>
-                    <small class="en-sub">According to ASTM D1194</small>
-                </h2>
-            </div>
-
-            <div class="w-1/4"></div>
-        </div>
-
-        <div class="no-print mb-4 flex gap-2 justify-center flex-wrap">
-            <button onclick="window.print()" class="btn btn-success">🖨️ طباعة التقرير<br><small class="en-sub" style="color:#fff;">Print Report</small></button>
-            <button onclick="generateChart()" class="btn btn-primary">📊 تحديث الرسم البياني<br><small class="en-sub" style="color:#fff;">Update Chart</small></button>
-        </div>
-
-        <div class="section-title"><span class="ar-text">بيانات المشروع</span><small class="en-sub">PROJECT INFORMATION</small></div>
-        <table class="mb-4">
-            <tr>
-                <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">اسم المشروع</span><small class="en-sub">Project Name</small></td>
-                <td><input type="text" id="projectName"></td>
-                <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">رقم الطلب</span><small class="en-sub">Order No.</small></td>
-                <td><input type="text" id="orderNo"></td>
-            </tr>
-            <tr>
-                <td class="label-cell bilingual-label"><span class="ar-text">العميل</span><small class="en-sub">Client</small></td>
-                <td><input type="text" id="client"></td>
-                <td class="label-cell bilingual-label"><span class="ar-text">تاريخ الاختبار</span><small class="en-sub">Test Date</small></td>
-                <td><input type="date" id="testDate"></td>
-            </tr>
-            <tr>
-                <td class="label-cell bilingual-label"><span class="ar-text">الموقع</span><small class="en-sub">Location</small></td>
-                <td><input type="text" id="location"></td>
-                <td class="label-cell bilingual-label"><span class="ar-text">تاريخ التقرير</span><small class="en-sub">Report Date</small></td>
-                <td><input type="date" id="reportDate"></td>
-            </tr>
-        </table>
-
-        <div class="plate-info-box no-print">
-            <div class="flex flex-wrap items-center justify-center gap-6">
-                <div class="text-center">
-                    <div class="label bilingual-label"><span class="ar-text" style="color:white;">قطر اللوح (سم)</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Plate Diameter (cm)</small></div>
-                    <input type="number" id="plateDiameter" value="45.72" step="0.1" min="1" oninput="calculatePlateArea()" style="width:120px;">
+                <div class="w-2/4 text-center">
+                    <h1>
+                        <span class="ar-text text-xl">تقرير اختبار تحميل اللوح</span>
+                        <small class="en-sub text-sm">PLATE LOAD TEST REPORT</small>
+                    </h1>
+                    <h2 class="text-lg text-gray-600">
+                        <span class="ar-text">وفقاً للمواصفة ASTM D1194</span>
+                        <small class="en-sub">According to ASTM D1194</small>
+                    </h2>
                 </div>
-                <div class="text-center text-3xl" style="color:rgba(255,255,255,0.7);">→</div>
-                <div class="text-center">
-                    <div class="label bilingual-label"><span class="ar-text" style="color:white;">مساحة اللوح (سم²)</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Plate Area (cm²)</small></div>
-                    <input type="text" id="plateArea" readonly style="width:150px; background:#e8f4fc; color:#0066cc;">
-                </div>
-                <div class="text-center ml-4 pl-4 border-l border-white/30">
-                     <div class="label bilingual-label"><span class="ar-text" style="color:#ffebb5;">معامل التحويل</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Conversion Factor</small></div>
-                     <input type="number" id="ramFactor" value="16.428" style="width:100px; color:#c62828;" title="يتم ضرب الميجاباسكال في هذا الرقم للحصول على الطن">
-                </div>
-            </div>
-        </div>
-
-        <table class="mb-4" style="display:none;" id="plateInfoPrint">
-            <tr>
-                <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">قطر اللوح (سم)</span><small class="en-sub">Plate Diameter (cm)</small></td>
-                <td id="plateDiameterPrint">45.72</td>
-                <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">مساحة اللوح (سم²)</span><small class="en-sub">Plate Area (cm²)</small></td>
-                <td id="plateAreaPrint">1641.73</td>
-            </tr>
-        </table>
-
-        <div class="global-actions no-print">
-            <button onclick="calculateAllResults()" class="btn btn-info">🔄 حساب جميع النتائج<br><small class="en-sub" style="color:#fff;">Calculate</small></button>
-            <button onclick="saveToLocal()" class="btn btn-success" style="background-color: #198754;">💾 حفظ مؤقت<br><small class="en-sub" style="color:#fff;">Save</small></button>
-            <button onclick="loadFromLocal()" class="btn btn-warning" style="background-color: #ffc107; color:black;">📂 استرجاع<br><small class="en-sub">Load</small></button>
-            <button onclick="resetNewTest()" class="btn btn-danger">🗑️ إعادة تعيين<br><small class="en-sub" style="color:#fff;">Reset</small></button>
-        </div>
-
-        <div class="tabs-nav no-print" id="tabsNav">
-            <button class="tab-btn active" onclick="switchTab(1)" id="tab1Btn"><span class="tab-indicator">1</span> <span class="ar-text">القسم أ - مرحلة التحميل</span><small class="en-sub">Section A - Loading Stage</small></button>
-            <button class="tab-btn" onclick="switchTab(2)" id="tab2Btn"><span class="tab-indicator">2</span> <span class="ar-text">القسم ب - مرحلة رفع الحمل</span><small class="en-sub">Section B - Unloading Stage</small></button>
-            <button class="tab-btn" onclick="switchTab(3)" id="tab3Btn"><span class="tab-indicator">3</span> <span class="ar-text">القسم ج - النتائج والمنحنيات</span><small class="en-sub">Section C - Results & Curves</small></button>
-        </div>
-
-        <div class="tab-content active" id="tab1Content">
-            <div class="section-title"><span class="ar-text">أ- مرحلة التحميل</span><small class="en-sub">A- LOADING STAGE</small></div>
-            
-            <div class="load-step-title" id="loadingTitle1">
-                <div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div>
-                <input type="text" id="loadingStageLabel1" value="0.70 kg/cm²">
-            </div>
-            <div class="no-print mb-2 mt-2 text-center">
-                <button onclick="addLoadingRow('loading1')" class="btn btn-primary">+ إضافة صف</button>
-                <button onclick="removeLastRow('loading1Body')" class="btn btn-danger">- حذف</button>
-            </div>
-            <table id="loading1Table" class="mb-4">
-                <thead>
-                    <tr>
-                        <th class="bilingual-label"><span class="ar-text">الوقت</span><small class="en-sub">Time</small></th>
-                        <th class="bilingual-label bg-yellow-50"><span class="ar-text">الضغط (MPa)</span><small class="en-sub">Pressure</small></th>
-                        <th class="bilingual-label bg-gray-50"><span class="ar-text">الحمل (طن)</span><small class="en-sub">Load (ton)</small></th>
-                        <th class="bilingual-label"><span class="ar-text">العداد 1</span><small class="en-sub">Gauge 1</small></th>
-                        <th class="bilingual-label"><span class="ar-text">العداد 2</span><small class="en-sub">Gauge 2</small></th>
-                        <th class="bilingual-label"><span class="ar-text">العداد 3</span><small class="en-sub">Gauge 3</small></th>
-                        <th class="calculated bilingual-label"><span class="ar-text">المتوسط</span><small class="en-sub">Avg</small></th>
-                        <th class="calculated bilingual-label"><span class="ar-text">الهبوط</span><small class="en-sub">Sett. (mm)</small></th>
-                        <th class="stress-calculated bilingual-label"><span class="ar-text">الإجهاد</span><small class="en-sub">Stress</small></th>
-                        <th class="bilingual-label"><span class="ar-text">الحرارة</span><small class="en-sub">Temp</small></th>
-                        <th class="no-print bilingual-label">X</th>
-                    </tr>
-                </thead>
-                <tbody id="loading1Body"></tbody>
-            </table>
-
-            <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel2" value="1.40 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading2')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading2Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="loading2Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="loading2Body"></tbody>
-            </table>
-
-            <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel3" value="2.10 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading3')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading3Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="loading3Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="loading3Body"></tbody>
-            </table>
-
-            <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel4" value="2.80 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading4')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading4Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="loading4Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="loading4Body"></tbody>
-            </table>
-
-             <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel5" value="3.50 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading5')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading5Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="loading5Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="loading5Body"></tbody>
-            </table>
-
-             <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel6" value="4.20 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading6')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading6Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="loading6Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="loading6Body"></tbody>
-            </table>
-
-            <div class="nav-buttons no-print"><div></div><button onclick="switchTab(2)" class="btn btn-primary btn-nav"><span class="ar-text">الخطوة التالية</span> →</button></div>
-        </div>
-
-        <div class="tab-content" id="tab2Content">
-            <div class="section-title"><span class="ar-text">ب- مرحلة رفع الحمل</span><small class="en-sub">B- UNLOADING STAGE</small></div>
-
-            <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel1" value="2.80 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading1')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading1Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="unloading1Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="unloading1Body"></tbody>
-            </table>
-
-            <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel2" value="1.40 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading2')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading2Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="unloading2Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="unloading2Body"></tbody>
-            </table>
-
-            <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel3" value="0.00 kg/cm²"></div>
-            <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading3')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading3Body')" class="btn btn-danger">- حذف</button></div>
-            <table id="unloading3Table" class="mb-4">
-                <thead><tr><th class="bilingual-label">الوقت<br><small>Time</small></th><th class="bilingual-label bg-yellow-50">الضغط<br><small>MPa</small></th><th class="bilingual-label bg-gray-50">الحمل<br><small>Ton</small></th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
-                <tbody id="unloading3Body"></tbody>
-            </table>
-
-            <div class="nav-buttons no-print">
-                <button onclick="switchTab(1)" class="btn btn-warning btn-nav">← <span class="ar-text">السابق</span></button>
-                <button onclick="switchTab(3)" class="btn btn-primary btn-nav"><span class="ar-text">التالي</span> →</button>
-            </div>
-        </div>
-
-        <div class="tab-content" id="tab3Content">
-            <div class="section-title"><span class="ar-text">ملخص نتائج الاختبار</span><small class="en-sub">SUMMARY OF TEST RESULTS</small></div>
-            <div class="no-print mb-2 mt-2 text-center">
-                <button onclick="addSummaryRow()" class="btn btn-primary">+ صف</button>
-                <button onclick="autoFillSummary()" class="btn btn-success">⚡ تعبئة تلقائية ورسم</button>
-            </div>
-            <table id="summaryTable">
-                <thead>
-                    <tr>
-                        <th class="bilingual-label"><span class="ar-text">المرحلة</span><small class="en-sub">Stage</small></th>
-                        <th class="bilingual-label"><span class="ar-text">الحمل (طن)</span><small class="en-sub">Load (ton)</small></th>
-                        <th class="calculated bilingual-label"><span class="ar-text">الإجهاد (كجم/سم²)</span><small class="en-sub">Stress (kg/cm²)</small></th>
-                        <th class="bilingual-label"><span class="ar-text">الهبوط (مم)</span><small class="en-sub">Settlement (mm)</small></th>
-                        <th class="no-print bilingual-label">X</th>
-                    </tr>
-                </thead>
-                <tbody id="summaryBody"></tbody>
-            </table>
-
-           <div class="section-title page-break mt-6"><span class="ar-text">ج- المنحنيات</span><small class="en-sub">C- CURVES (Stress vs Settlement)</small></div>
-            
-            <div class="mt-4 p-4 border border-gray-300" style="height: 500px;">
-                <canvas id="stressSettlementChart"></canvas>
+                <div class="w-1/4"></div>
             </div>
 
-            <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center shadow-sm">
-                <h3 class="text-indigo-900 font-bold text-lg mb-2">
-                    <span class="ar-text">معامل رد فعل التربة (K-Value)</span>
-                    <small class="en-sub block font-normal text-sm">Modulus of Subgrade Reaction</small>
-                </h3>
-                <div class="flex justify-center items-baseline gap-2 dir-ltr">
-                    <span class="text-gray-600 font-bold">K = </span>
-                    <span id="kValueResult" class="text-4xl font-bold text-indigo-700">0.00</span>
-                    <span class="text-gray-500 font-bold">kg/cm³</span>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">
-                    * Calculated based on maximum loading point (P/Δ)
-                    <br> * يتم الحساب بناءً على أقصى نقطة تحميل (الإجهاد / الهبوط بالسم)
-                </p>
+            <div class="no-print mb-4 flex gap-2 justify-center flex-wrap">
+                <button onclick="window.print()" class="btn btn-success">🖨️ طباعة التقرير</button>
+                <button onclick="generateChart()" class="btn btn-primary">📊 تحديث الرسم البياني</button>
             </div>
 
-            <div class="nav-buttons no-print">
-                <button onclick="switchTab(2)" class="btn btn-warning btn-nav">← <span class="ar-text">السابق</span></button>
-                <div></div>
-            </div>
-        </div>
-
-       <div class="mt-8 pt-4 border-t-2 border-gray-400">
-            <table class="signature-section" style="border:none;">
-                <tr style="border:none;">
-                    <td class="w-1/3 text-center p-4" style="border:none;">
-                        <div class="border-t border-black pt-2 mt-8">
-                            <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
-                            <span class="ar-text block">فحص بواسطة</span>
-                            <small class="en-sub">Tested By</small>
-                        </div>
-                    </td>
-                    <td class="w-1/3 text-center p-4" style="border:none;">
-                        <div class="border-t border-black pt-2 mt-8">
-                            <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
-                            <span class="ar-text block">مراجعة بواسطة</span>
-                            <small class="en-sub">Checked By</small>
-                        </div>
-                    </td>
-                    <td class="w-1/3 text-center p-4" style="border:none;">
-                        <div class="border-t border-black pt-2 mt-8">
-                            <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
-                            <span class="ar-text block">اعتماد بواسطة</span>
-                            <small class="en-sub">Approved By</small>
-                        </div>
-                    </td>
+            <div class="section-title"><span class="ar-text">بيانات المشروع</span><small class="en-sub">PROJECT INFORMATION</small></div>
+            <table class="mb-4">
+                <tr>
+                    <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">اسم المشروع</span><small class="en-sub">Project Name</small></td>
+                    <td><input type="text" id="projectName"></td>
+                    <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">رقم الطلب</span><small class="en-sub">Order No.</small></td>
+                    <td><input type="text" id="orderNo"></td>
+                </tr>
+                <tr>
+                    <td class="label-cell bilingual-label"><span class="ar-text">العميل</span><small class="en-sub">Client</small></td>
+                    <td><input type="text" id="client"></td>
+                    <td class="label-cell bilingual-label"><span class="ar-text">تاريخ الاختبار</span><small class="en-sub">Test Date</small></td>
+                    <td><input type="date" id="testDate"></td>
+                </tr>
+                <tr>
+                    <td class="label-cell bilingual-label"><span class="ar-text">الموقع</span><small class="en-sub">Location</small></td>
+                    <td><input type="text" id="location"></td>
+                    <td class="label-cell bilingual-label"><span class="ar-text">تاريخ التقرير</span><small class="en-sub">Report Date</small></td>
+                    <td><input type="date" id="reportDate"></td>
                 </tr>
             </table>
-        </div>
-        
-        <div class="mt-8 mb-4 text-center border-t border-gray-300 pt-4">
-            <p class="text-2xl font-bold text-indigo-800" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
-                إعداد وتطوير: م/ محمد أحمد القصبي
-            </p>
-            <p class="text-sm text-gray-500 font-semibold mt-1">
-                Developed By: Eng. Mohamed Ahmed Elkasaby
-            </p>
-        </div>
 
+            <div class="bg-blue-50 p-4 rounded mb-4 border border-blue-200 no-print">
+                <div class="flex flex-wrap justify-center gap-6 items-center">
+                    <label class="font-bold text-blue-900">
+                        وحدة قياس العداد (Gauge Unit):
+                        <select id="gauge_unit" class="p-1 border rounded dir-ltr" onchange="updateCalculations()">
+                            <option value="MPa">MPa (ميجاباسكال)</option>
+                            <option value="Bar">Bar (بار)</option>
+                            <option value="psi">psi (رطل/بوصة²)</option>
+                            <option value="kg_cm2">kg/cm² (كجم/سم²)</option>
+                        </select>
+                    </label>
+                    <span class="text-gray-400">|</span>
+                    <label class="font-bold text-blue-900">
+                        قدرة تحمل التربة (Design Load):
+                        <input type="number" id="design_load" placeholder="مثلاً 1.5" class="bg-white p-1 w-20 border rounded" oninput="autoUpdateStages()"> kg/cm²
+                    </label>
+                </div>
+                <div class="text-center mt-2 text-sm text-gray-500">
+                    * سيتم تحويل قراءة العداد وتحديث مراحل التحميل تلقائياً.
+                </div>
+            </div>
+
+            <div class="plate-info-box no-print">
+                <div class="flex flex-wrap items-center justify-center gap-6">
+                    <div class="text-center">
+                        <div class="label bilingual-label"><span class="ar-text" style="color:white;">قطر اللوح (سم)</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Plate Diameter (cm)</small></div>
+                        <input type="number" id="plateDiameter" value="45.72" step="0.1" min="1" oninput="calculatePlateArea()" style="width:120px;">
+                    </div>
+                    <div class="text-center text-3xl" style="color:rgba(255,255,255,0.7);">→</div>
+                    <div class="text-center">
+                        <div class="label bilingual-label"><span class="ar-text" style="color:white;">مساحة اللوح (سم²)</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Plate Area (cm²)</small></div>
+                        <input type="text" id="plateArea" readonly style="width:150px; background:#e8f4fc; color:#0066cc;">
+                    </div>
+                    <div class="text-center ml-4 pl-4 border-l border-white/30">
+                         <div class="label bilingual-label"><span class="ar-text" style="color:#ffebb5;">معامل التحويل</span><small class="en-sub" style="color:rgba(255,255,255,0.85);">Conversion Factor</small></div>
+                         <input type="number" id="ramFactor" value="16.428" style="width:100px; color:#c62828;" title="يتم ضرب الميجاباسكال في هذا الرقم للحصول على الطن">
+                    </div>
+                </div>
+            </div>
+
+            <table class="mb-4" style="display:none;" id="plateInfoPrint">
+                <tr>
+                    <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">قطر اللوح (سم)</span><small class="en-sub">Plate Diameter (cm)</small></td>
+                    <td id="plateDiameterPrint">45.72</td>
+                    <td class="label-cell w-1/4 bilingual-label"><span class="ar-text">مساحة اللوح (سم²)</span><small class="en-sub">Plate Area (cm²)</small></td>
+                    <td id="plateAreaPrint">1641.73</td>
+                </tr>
+            </table>
+
+            <div class="global-actions no-print">
+                <button onclick="calculateAllResults()" class="btn btn-info">🔄 حساب جميع النتائج</button>
+                <button onclick="saveToLocal()" class="btn btn-success" style="background-color: #198754;">💾 حفظ مؤقت</button>
+                <button onclick="loadFromLocal()" class="btn btn-warning" style="background-color: #ffc107; color:black;">📂 استرجاع</button>
+                <button onclick="resetNewTest()" class="btn btn-danger">🗑️ إعادة تعيين</button>
+            </div>
+
+            <div class="tabs-nav no-print" id="tabsNav">
+                <button class="tab-btn active" onclick="switchTab(1)" id="tab1Btn"><span class="tab-indicator">1</span> <span class="ar-text">القسم أ - مرحلة التحميل</span></button>
+                <button class="tab-btn" onclick="switchTab(2)" id="tab2Btn"><span class="tab-indicator">2</span> <span class="ar-text">القسم ب - مرحلة رفع الحمل</span></button>
+                <button class="tab-btn" onclick="switchTab(3)" id="tab3Btn"><span class="tab-indicator">3</span> <span class="ar-text">القسم ج - النتائج والمنحنيات</span></button>
+            </div>
+
+            <div class="tab-content active" id="tab1Content">
+                <div class="section-title"><span class="ar-text">أ- مرحلة التحميل</span><small class="en-sub">A- LOADING STAGE</small></div>
+                
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel1" value="0.70 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading1')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading1Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading1Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading1Body"></tbody>
+                </table>
+
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel2" value="1.40 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading2')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading2Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading2Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading2Body"></tbody>
+                </table>
+
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel3" value="2.10 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading3')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading3Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading3Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading3Body"></tbody>
+                </table>
+
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel4" value="2.80 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading4')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading4Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading4Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading4Body"></tbody>
+                </table>
+
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel5" value="3.50 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading5')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading5Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading5Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading5Body"></tbody>
+                </table>
+
+                <div class="load-step-title"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="loadingStageLabel6" value="4.20 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addLoadingRow('loading6')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('loading6Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="loading6Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="loading6Body"></tbody>
+                </table>
+
+                <div class="nav-buttons no-print"><div></div><button onclick="switchTab(2)" class="btn btn-primary btn-nav"><span class="ar-text">الخطوة التالية</span> →</button></div>
+            </div>
+
+            <div class="tab-content" id="tab2Content">
+                <div class="section-title"><span class="ar-text">ب- مرحلة رفع الحمل</span><small class="en-sub">B- UNLOADING STAGE</small></div>
+
+                <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel1" value="2.80 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading1')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading1Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="unloading1Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="unloading1Body"></tbody>
+                </table>
+
+                <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel2" value="1.40 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading2')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading2Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="unloading2Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="unloading2Body"></tbody>
+                </table>
+
+                <div class="load-step-title" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><div class="bilingual-label"><span class="ar-text">مرحلة الإجهاد</span><small class="en-sub">Stress Level</small></div><input type="text" id="unloadingStageLabel3" value="0.00 kg/cm²"></div>
+                <div class="no-print mb-2 mt-2 text-center"><button onclick="addUnloadingRow('unloading3')" class="btn btn-primary">+ إضافة صف</button><button onclick="removeLastRow('unloading3Body')" class="btn btn-danger">- حذف</button></div>
+                <table id="unloading3Table" class="mb-4">
+                    <thead><tr><th class="bilingual-label">الوقت</th><th class="bilingual-label bg-yellow-50 gauge-header">الضغط<br><span class="unit-disp">(MPa)</span></th><th class="bilingual-label bg-gray-50">الحمل</th><th>G1</th><th>G2</th><th>G3</th><th class="calculated">Avg</th><th class="calculated">Sett.</th><th class="stress-calculated">Stress</th><th>Temp</th><th class="no-print">X</th></tr></thead>
+                    <tbody id="unloading3Body"></tbody>
+                </table>
+
+                <div class="nav-buttons no-print">
+                    <button onclick="switchTab(1)" class="btn btn-warning btn-nav">← <span class="ar-text">السابق</span></button>
+                    <button onclick="switchTab(3)" class="btn btn-primary btn-nav"><span class="ar-text">التالي</span> →</button>
+                </div>
+            </div>
+
+            <div class="tab-content" id="tab3Content">
+                <div class="section-title"><span class="ar-text">ملخص نتائج الاختبار</span><small class="en-sub">SUMMARY OF TEST RESULTS</small></div>
+                <div class="no-print mb-2 mt-2 text-center">
+                    <button onclick="addSummaryRow()" class="btn btn-primary">+ صف</button>
+                    <button onclick="autoFillSummary()" class="btn btn-success">⚡ تعبئة تلقائية ورسم</button>
+                </div>
+                <table id="summaryTable">
+                    <thead>
+                        <tr>
+                            <th class="bilingual-label"><span class="ar-text">المرحلة</span><small class="en-sub">Stage</small></th>
+                            <th class="bilingual-label"><span class="ar-text">الحمل (طن)</span><small class="en-sub">Load (ton)</small></th>
+                            <th class="calculated bilingual-label"><span class="ar-text">الإجهاد (كجم/سم²)</span><small class="en-sub">Stress (kg/cm²)</small></th>
+                            <th class="bilingual-label"><span class="ar-text">الهبوط (مم)</span><small class="en-sub">Settlement (mm)</small></th>
+                            <th class="no-print bilingual-label">X</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summaryBody"></tbody>
+                </table>
+
+               <div class="section-title page-break mt-6"><span class="ar-text">ج- المنحنيات</span><small class="en-sub">C- CURVES (Stress vs Settlement)</small></div>
+                
+                <div class="mt-4 p-4 border border-gray-300" style="height: 500px;">
+                    <canvas id="stressSettlementChart"></canvas>
+                </div>
+
+                <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg text-center shadow-sm">
+                    <h3 class="text-indigo-900 font-bold text-lg mb-2">
+                        <span class="ar-text">معامل رد فعل التربة (K-Value)</span>
+                        <small class="en-sub block font-normal text-sm">Modulus of Subgrade Reaction</small>
+                    </h3>
+                    <div class="flex justify-center items-baseline gap-2 dir-ltr">
+                        <span class="text-gray-600 font-bold">K = </span>
+                        <span id="kValueResult" class="text-4xl font-bold text-indigo-700">0.00</span>
+                        <span class="text-gray-500 font-bold">kg/cm³</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2">
+                        * Calculated based on maximum loading point (P/Δ)
+                        <br> * يتم الحساب بناءً على أقصى نقطة تحميل (الإجهاد / الهبوط بالسم)
+                    </p>
+                </div>
+
+                <div class="nav-buttons no-print">
+                    <button onclick="switchTab(2)" class="btn btn-warning btn-nav">← <span class="ar-text">السابق</span></button>
+                    <div></div>
+                </div>
+            </div>
+
+           <div class="mt-8 pt-4 border-t-2 border-gray-400">
+                <table class="signature-section" style="border:none;">
+                    <tr style="border:none;">
+                        <td class="w-1/3 text-center p-4" style="border:none;">
+                            <div class="border-t border-black pt-2 mt-8">
+                                <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
+                                <span class="ar-text block">فحص بواسطة</span>
+                                <small class="en-sub">Tested By</small>
+                            </div>
+                        </td>
+                        <td class="w-1/3 text-center p-4" style="border:none;">
+                            <div class="border-t border-black pt-2 mt-8">
+                                <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
+                                <span class="ar-text block">مراجعة بواسطة</span>
+                                <small class="en-sub">Checked By</small>
+                            </div>
+                        </td>
+                        <td class="w-1/3 text-center p-4" style="border:none;">
+                            <div class="border-t border-black pt-2 mt-8">
+                                <input type="text" class="text-center w-full font-bold mb-1 bg-transparent" placeholder="الاسم / Name" style="border:none;">
+                                <span class="ar-text block">اعتماد بواسطة</span>
+                                <small class="en-sub">Approved By</small>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            
+            <div class="mt-8 mb-4 text-center border-t border-gray-300 pt-4">
+                <p class="text-2xl font-bold text-indigo-800" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+                    إعداد وتطوير: م/ محمد أحمد القصبي
+                </p>
+                <p class="text-sm text-gray-500 font-semibold mt-1">
+                    Developed By: Eng. Mohamed Ahmed Elkasaby
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-DIN" class="view-section">
+        <div class="report-container">
+            <div class="header-logo mb-6 flex items-center justify-between relative">
+                <div class="w-1/4 flex justify-center items-center">
+                    <img id="companyLogo_DIN" src="#" class="max-h-24 object-contain hidden">
+                    <div class="no-print text-center" id="upBtn_DIN">
+                        <label class="cursor-pointer bg-gray-200 p-2 rounded text-xs">📷 Logo<input type="file" class="hidden" onchange="loadLogo(event, 'DIN')"></label>
+                    </div>
+                </div>
+                <div class="w-2/4 text-center din-header">
+                    <h1 class="text-xl font-bold">اختبار تحميل اللوح (DIN 18134)<br><span class="text-sm font-normal">Plate Loading Test</span></h1>
+                    <h2 class="text-sm text-gray-600">Strain Modulus Ev Calculation</h2>
+                </div>
+                <div class="w-1/4"></div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4">
+                <div>
+                    <div class="cycle-header">1st Loading Cycle</div>
+                    <table id="dinTable1">
+                        <thead><tr class="bg-gray-100"><th>Load (MN/m²) (σ)</th><th>Settlement (mm) (s)</th><th class="no-print">Del</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTable1')">+</button></div>
+                </div>
+                </div>
+            
+            <div class="mt-8 pt-4 border-t border-gray-400 text-center">
+                <p>إعداد وتطوير: م/ محمد أحمد القصبي</p>
+            </div>
+        </div>
     </div>
 
     <script>
+        // 1. تبديل الواجهات
+        function switchStandard(std) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.std-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + std).classList.add('active');
+            const btns = document.querySelectorAll('.std-btn');
+            if(std === 'ASTM') btns[0].classList.add('active'); else btns[1].classList.add('active');
+        }
+
+        function loadLogo(e, type) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    if(type === 'ASTM') {
+                        const img = document.getElementById('companyLogo');
+                        img.src = evt.target.result;
+                        img.classList.remove('hidden');
+                        document.getElementById('uploadLogoBtnContainer').style.display = 'none';
+                    } else {
+                        const img = document.getElementById('companyLogo_DIN');
+                        img.src = evt.target.result;
+                        img.classList.remove('hidden');
+                        document.getElementById('upBtn_DIN').style.display = 'none';
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        /* --- ASTM LOGIC (Modified for ALL UNITS) --- */
         let rowCounters = {};
         let summaryRowCount = 0;
         let chart = null;
@@ -417,20 +478,19 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            calculatePlateArea(); // Calc initial area
-            // Init counters & Rows
+            calculatePlateArea();
             for (let i = 1; i <= 6; i++) { rowCounters[`loading${i}`] = 0; addLoadingRow(`loading${i}`); addLoadingRow(`loading${i}`); }
             for (let i = 1; i <= 3; i++) { rowCounters[`unloading${i}`] = 0; addUnloadingRow(`unloading${i}`); addUnloadingRow(`unloading${i}`); }
             addSummaryRow();
             document.getElementById('reportDate').valueAsDate = new Date();
             document.getElementById('plateInfoPrint').style.display = 'table';
-            
-            // Register DataLabels
             Chart.register(ChartDataLabels);
             generateChart();
+            
+            // تهيئة DIN افتراضياً
+            addDinRow('dinTable1');
         });
 
-        // --- تعديل: إضافة خانة MPa في الصف الجديد ---
         function addLoadingRow(tableId) {
             if (!rowCounters[tableId]) rowCounters[tableId] = 0;
             rowCounters[tableId]++;
@@ -439,7 +499,7 @@
             row.id = `${tableId}-row-${rowCounters[tableId]}`;
             row.innerHTML = `
                 <td><input type="text" class="print-compact" placeholder="HH:MM"></td>
-                <td class="bg-yellow-50"><input type="number" step="0.001" class="mpa-input print-compact" oninput="calculateRow(this)" placeholder="MPa"></td>
+                <td class="bg-yellow-50"><input type="number" step="0.001" class="mpa-input print-compact" oninput="calculateRow(this)" placeholder="Pressure"></td>
                 <td class="bg-gray-50"><input type="number" step="0.01" class="load-input print-compact" onchange="calculateRow(this)" readonly></td>
                 <td><input type="number" step="0.001" class="gauge-input print-compact" onchange="calculateRow(this)"></td>
                 <td><input type="number" step="0.001" class="gauge-input print-compact" onchange="calculateRow(this)"></td>
@@ -453,43 +513,82 @@
             tbody.appendChild(row);
         }
 
-        function addUnloadingRow(tableId) {
-            // نفس كود التحميل بالظبط
-            addLoadingRow(tableId);
+        function addUnloadingRow(tableId) { addLoadingRow(tableId); }
+
+        // --- تحديث مراحل التحميل (Auto Stages) ---
+        function autoUpdateStages() {
+            const designLoad = parseFloat(document.getElementById('design_load').value);
+            if(isNaN(designLoad) || designLoad <= 0) return;
+
+            // قيم المراحل: 0.25 (غير مستخدمة هنا)، 0.50، 0.75، 1.00، 1.50، 2.00
+            // الترتيب حسب الجداول الموجودة لديك:
+            // Table 1 -> 50%
+            // Table 2 -> 100%
+            // Table 3 -> 150%
+            // Table 4 -> 200%
+            // Table 5 -> 250%
+            // Table 6 -> 300%
+            
+            const multipliers = [0.50, 1.00, 1.50, 2.00, 2.50, 3.00];
+            for(let i=1; i<=6; i++) {
+                let val = (designLoad * multipliers[i-1]).toFixed(2);
+                document.getElementById(`loadingStageLabel${i}`).value = `${val} kg/cm²`;
+            }
+            
+            // Unloading Stages (200%, 100%, 0%)
+            document.getElementById(`unloadingStageLabel1`).value = `${(designLoad * 2.00).toFixed(2)} kg/cm²`;
+            document.getElementById(`unloadingStageLabel2`).value = `${(designLoad * 1.00).toFixed(2)} kg/cm²`;
+            document.getElementById(`unloadingStageLabel3`).value = `0.00 kg/cm²`;
         }
 
-        // --- تعديل: منطق الحساب لتحويل MPa لـ طن ---
+        // --- تحديث الحسابات بناءً على الوحدة ---
+        function updateCalculations() {
+            // تحديث عناوين الوحدات في الجداول
+            const unit = document.getElementById('gauge_unit').value;
+            const labels = document.querySelectorAll('.unit-disp');
+            labels.forEach(l => l.innerText = `(${unit})`);
+            
+            // إعادة حساب كل الصفوف
+            document.querySelectorAll('.mpa-input').forEach(inp => calculateRow(inp));
+        }
+
         function calculateRow(input) {
             const row = input.closest('tr');
             const gaugeInputs = row.querySelectorAll('.gauge-input');
             const loadInput = row.querySelector('.load-input');
-            const mpaInput = row.querySelector('.mpa-input');
+            const mpaInput = row.querySelector('.mpa-input'); // This is now "Gauge Input"
             
-            // 1. تحويل MPa لـ طن
-            if (mpaInput && mpaInput.value !== '') {
+            // 1. تحويل الوحدة المختارة إلى MPa
+            const unit = document.getElementById('gauge_unit').value;
+            let gaugeValue = parseFloat(mpaInput.value);
+            
+            if (!isNaN(gaugeValue)) {
+                let pressureMPa = 0;
+                if (unit === 'MPa') pressureMPa = gaugeValue;
+                else if (unit === 'Bar') pressureMPa = gaugeValue / 10;
+                else if (unit === 'psi') pressureMPa = gaugeValue / 145.038;
+                else if (unit === 'kg_cm2') pressureMPa = gaugeValue / 10.197;
+
+                // 2. حساب الحمل (طن) = الضغط (MPa) * معامل المكبس
                 const factor = parseFloat(document.getElementById('ramFactor').value) || 16.428;
-                loadInput.value = (parseFloat(mpaInput.value) * factor).toFixed(2);
+                let loadTon = pressureMPa * factor;
+                loadInput.value = loadTon.toFixed(2);
+
+                // 3. حساب الإجهاد
+                const area = getPlateArea();
+                row.querySelector('.stress-cell').textContent = ((loadTon * 1000) / area).toFixed(2);
             }
 
-            // 2. حساب المتوسط والهبوط
+            // 4. حساب الهبوط
             let sum = 0, count = 0;
             gaugeInputs.forEach(g => { if(g.value!=='') { sum+=parseFloat(g.value); count++; } });
-            
             if (count === 3) {
                 const avg = sum / 3;
                 row.querySelector('.average-cell').textContent = avg.toFixed(3);
                 row.querySelector('.settlement-cell').textContent = (avg * 0.001).toFixed(3);
             }
-
-            // 3. حساب الإجهاد
-            if (loadInput && loadInput.value !== '') {
-                const load = parseFloat(loadInput.value);
-                const area = getPlateArea();
-                row.querySelector('.stress-cell').textContent = ((load * 1000) / area).toFixed(2);
-            }
         }
 
-        // --- تعديل: تحديث الرسمة لحظياً عند الكتابة في الملخص ---
         function addSummaryRow() {
             summaryRowCount++;
             const tbody = document.getElementById('summaryBody');
@@ -512,14 +611,12 @@
                 const area = getPlateArea();
                 row.querySelector('.stress-cell').textContent = ((load * 1000) / area).toFixed(2);
             }
-            generateChart(); // تحديث الرسمة فوراً
+            generateChart();
         }
 
         function autoFillSummary() {
             document.getElementById('summaryBody').innerHTML = '';
             summaryRowCount = 0;
-            
-            // 1. إضافة نقطة الصفر (إجباري)
             addSummaryRow();
             let r = document.getElementById(`summary-row-${summaryRowCount}`);
             r.querySelector('.stage-select').value = 'Loading';
@@ -527,11 +624,10 @@
             r.querySelector('.settlement-input').value = '0.000';
             r.querySelector('.stress-cell').textContent = '0.00';
 
-            // 2. سحب البيانات من جداول التحميل
             for (let i = 1; i <= 6; i++) {
                 const rows = document.querySelectorAll(`#loading${i}Body tr`);
                 if (rows.length > 0) {
-                    const last = rows[rows.length - 1]; // آخر قراءة
+                    const last = rows[rows.length - 1];
                     if (last.querySelector('.load-input').value) {
                         addSummaryRow();
                         r = document.getElementById(`summary-row-${summaryRowCount}`);
@@ -542,7 +638,6 @@
                     }
                 }
             }
-            // 3. سحب البيانات من جداول الرفع
             for (let i = 1; i <= 3; i++) {
                 const rows = document.querySelectorAll(`#unloading${i}Body tr`);
                 if (rows.length > 0) {
@@ -560,24 +655,19 @@
             generateChart();
         }
 
-        // --- تعديل: الرسم البياني (مقلوب + أرقام + محور علوي) ---
         function generateChart() {
             const rows = document.querySelectorAll('#summaryBody tr');
             const loadingData = [], unloadingData = [];
-            
             rows.forEach(row => {
                 const stage = row.querySelector('.stage-select').value;
                 const stress = parseFloat(row.querySelector('.stress-cell').textContent);
                 const sett = parseFloat(row.querySelector('.settlement-input').value);
-                
                 if (!isNaN(stress) && !isNaN(sett)) {
                     const pt = { x: stress, y: sett };
                     if (stage === 'Loading') loadingData.push(pt); 
                     else unloadingData.push(pt);
                 }
             });
-
-            // الترتيب عشان الخط يترسم صح
             loadingData.sort((a,b) => a.x - b.x);
             unloadingData.sort((a,b) => b.x - a.x);
 
@@ -588,82 +678,25 @@
                 type: 'line',
                 data: {
                     datasets: [
-                        {
-                            label: 'Loading', 
-                            data: loadingData,
-                            // --- التعديلات هنا (أحمر وأزرق غامق) ---
-                            borderColor: '#1F4E79',       // أزرق غامق للخط
-                            backgroundColor: '#C00000',   // أحمر للنقطة
-                            pointBackgroundColor: '#C00000', 
-                            pointBorderColor: '#C00000',
-                            pointStyle: 'rectRot',        // شكل معين
-                            pointRadius: 5,
-                            borderWidth: 2,
-                            tension: 0,
-                            fill: false
-                        },
-                        {
-                            label: 'Unloading', 
-                            data: unloadingData,
-                            // --- الخط الراجع (متصل ولونه أزرق) ---
-                            borderColor: '#1F4E79',       // نفس الأزرق
-                            backgroundColor: '#C00000',   // نفس الأحمر
-                            pointBackgroundColor: '#C00000',
-                            pointBorderColor: '#C00000',
-                            pointStyle: 'rectRot',
-                            pointRadius: 5,
-                            borderWidth: 2,
-                            borderDash: [],               // << شيلنا التنقيط عشان يبقى متصل Solid
-                            tension: 0,
-                            fill: false
-                        }
+                        { label: 'Loading', data: loadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, tension: 0, fill: false },
+                        { label: 'Unloading', data: unloadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, borderDash: [], tension: 0, fill: false }
                     ]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     layout: { padding: { top: 30, right: 30, left: 10, bottom: 10 } },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false },
-                        datalabels: {
-                            display: true, 
-                            align: 'right', 
-                            anchor: 'center', 
-                            offset: 6,
-                            color: '#000',
-                            font: { weight: 'bold', size: 11 },
-                            formatter: (v) => v.y.toFixed(3)
-                        }
-                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: true, align: 'right', anchor: 'center', offset: 6, color: '#000', font: { weight: 'bold', size: 11 }, formatter: (v) => v.y.toFixed(3) } },
                     scales: {
-                        x: {
-                            type: 'linear', 
-                            position: 'top',
-                            title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' },
-                            min: 0, 
-                            max: 4.5,
-                            grid: { color: '#000', lineWidth: 0.5 }, // الشبكة سوداء
-                            ticks: { color: '#000', font: {weight:'bold'} }
-                        },
-                        y: {
-                            reverse: true,
-                            title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' },
-                            min: 0,
-                            grid: { color: '#000', lineWidth: 0.5 }, // الشبكة سوداء
-                            ticks: { color: '#000', font: {weight:'bold'} }
-                        }
+                        x: { type: 'linear', position: 'top', title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, max: 4.5, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } },
+                        y: { reverse: true, title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } }
                     }
                 }
             });
-
-            // --- هام: تشغيل حساب K-Value عند رسم المنحنى ---
             calculateKValue(loadingData);
         }
 
-        // --- دوال الحفظ والاسترجاع (Save & Load System) ---
-
-        function saveToLocal() {
+        // --- وظائف الحفظ والاسترجاع وال DIN (مختصرة) ---
+        function saveToLocal() { /* (نفس الكود القديم) */ 
             const data = {
                 project: {
                     name: document.getElementById('projectName').value,
@@ -678,42 +711,27 @@
                 loadingTables: {},
                 unloadingTables: {}
             };
-
             for (let i = 1; i <= 6; i++) data.loadingTables[`loading${i}`] = getTableData(`loading${i}`);
             for (let i = 1; i <= 3; i++) data.unloadingTables[`unloading${i}`] = getTableData(`unloading${i}`);
-
             localStorage.setItem('plateTestBackup', JSON.stringify(data));
             alert('✅ تم حفظ البيانات مؤقتاً!');
         }
-
         function calculateKValue(loadingData) {
-            if (!loadingData || loadingData.length === 0) {
-                document.getElementById('kValueResult').textContent = "0.00";
-                return;
-            }
-            // 1. نجيب آخر نقطة في التحميل (أقصى إجهاد)
+            if (!loadingData || loadingData.length === 0) { document.getElementById('kValueResult').textContent = "0.00"; return; }
             const lastPoint = loadingData[loadingData.length - 1];
-            const stress = lastPoint.x; // kg/cm2
-            const settlementMM = lastPoint.y; // mm
-            
+            const stress = lastPoint.x; const settlementMM = lastPoint.y;
             if (settlementMM > 0) {
-                // 2. التحويل لـ سم (القسمة على 10)
                 const settlementCM = settlementMM / 10;
-                // 3. الحساب (Stress / Settlement_cm)
                 const kVal = stress / settlementCM;
-                // 4. العرض
                 document.getElementById('kValueResult').textContent = kVal.toFixed(2);
-            } else {
-                document.getElementById('kValueResult').textContent = "0.00";
-            }
+            } else { document.getElementById('kValueResult').textContent = "0.00"; }
         }
-
         function getTableData(tableId) {
             const rows = [];
             document.querySelectorAll(`#${tableId}Body tr`).forEach(tr => {
                 rows.push({
                     time: tr.querySelector('td:nth-child(1) input').value,
-                    mpa: tr.querySelector('.mpa-input').value,
+                    mpa: tr.querySelector('.mpa-input').value, // This is now "Gauge Value"
                     g1: tr.querySelectorAll('.gauge-input')[0].value,
                     g2: tr.querySelectorAll('.gauge-input')[1].value,
                     g3: tr.querySelectorAll('.gauge-input')[2].value,
@@ -722,15 +740,11 @@
             });
             return rows;
         }
-
         function loadFromLocal() {
             const json = localStorage.getItem('plateTestBackup');
             if (!json) { alert('❌ لا توجد بيانات محفوظة!'); return; }
             if(!confirm('استرجاع البيانات المحفوظة؟ (سيتم مسح البيانات الحالية)')) return;
-
             const data = JSON.parse(json);
-            
-            // استرجاع بيانات المشروع
             document.getElementById('projectName').value = data.project.name;
             document.getElementById('orderNo').value = data.project.order;
             document.getElementById('client').value = data.project.client;
@@ -740,12 +754,9 @@
             document.getElementById('plateDiameter').value = data.project.plateDiameter;
             document.getElementById('ramFactor').value = data.project.ramFactor;
             calculatePlateArea();
-
-            // دالة مساعدة لبناء الصفوف
             const restore = (id, rows) => {
                 const body = document.getElementById(`${id}Body`);
-                body.innerHTML = ''; 
-                rowCounters[id] = 0;
+                body.innerHTML = ''; rowCounters[id] = 0;
                 if(rows) rows.forEach(r => {
                     id.includes('unloading') ? addUnloadingRow(id) : addLoadingRow(id);
                     const tr = body.lastElementChild;
@@ -758,32 +769,20 @@
                     calculateRow(tr.querySelector('.mpa-input'));
                 });
             };
-
             for (let i = 1; i <= 6; i++) restore(`loading${i}`, data.loadingTables[`loading${i}`]);
             for (let i = 1; i <= 3; i++) restore(`unloading${i}`, data.unloadingTables[`unloading${i}`]);
-
             autoFillSummary();
             alert('✅ تم الاسترجاع!');
         }
-
         function removeRow(id) { document.getElementById(id)?.remove(); }
         function removeLastRow(id) { const b = document.getElementById(id); if(b.lastChild) b.removeChild(b.lastChild); }
         function resetNewTest() { if(confirm('حذف كل البيانات؟')) location.reload(); }
         function calculateAllResults() { autoFillSummary(); alert('تم الحساب والتحديث'); }
         
-        // --- دالة رفع وعرض اللوجو ---
-        function loadLogo(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = document.getElementById('companyLogo');
-                    img.src = e.target.result;
-                    img.classList.remove('hidden'); // إظهار الصورة
-                    document.getElementById('uploadLogoBtnContainer').style.display = 'none'; // إخفاء زر الرفع عشان الشكل
-                };
-                reader.readAsDataURL(file);
-            }
+        // --- دالة DIN (مؤقتة للإضافة لاحقاً) ---
+        function addDinRow(tableId) {
+            const row = `<tr><td><input type="number" step="0.01"></td><td><input type="number" step="0.01"></td><td class="no-print"><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">x</button></td></tr>`;
+            document.getElementById(tableId).querySelector('tbody').insertAdjacentHTML('beforeend', row);
         }
     </script>
 </body>
