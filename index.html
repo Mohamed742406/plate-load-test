@@ -683,44 +683,44 @@
         }
 
         function generateChart() {
-            const rows = document.querySelectorAll('#summaryBody tr');
-            const loadingData = [], unloadingData = [];
-            rows.forEach(row => {
-                const stage = row.querySelector('.stage-select').value;
-                const stress = parseFloat(row.querySelector('.stress-cell').textContent);
-                const sett = parseFloat(row.querySelector('.settlement-input').value);
-                if (!isNaN(stress) && !isNaN(sett)) {
-                    const pt = { x: stress, y: sett };
-                    if (stage === 'Loading') loadingData.push(pt); 
-                    else unloadingData.push(pt);
-                }
-            });
-            loadingData.sort((a,b) => a.x - b.x);
-            unloadingData.sort((a,b) => b.x - a.x);
-
-            const ctx = document.getElementById('stressSettlementChart').getContext('2d');
-            if (chart) chart.destroy();
-
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    datasets: [
-                        { label: 'Loading', data: loadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, tension: 0, fill: false },
-                        { label: 'Unloading', data: unloadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, borderDash: [], tension: 0, fill: false }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    layout: { padding: { top: 30, right: 30, left: 10, bottom: 10 } },
-                    plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: true, align: 'right', anchor: 'center', offset: 6, color: '#000', font: { weight: 'bold', size: 11 }, formatter: (v) => v.y.toFixed(3) } },
-                    scales: {
-                        x: { type: 'linear', position: 'top', title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, max: 4.5, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } },
-                        y: { reverse: true, title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } }
-                    }
-                }
-            });
-            calculateKValue(loadingData);
+    const rows = document.querySelectorAll('#summaryBody tr');
+    const loadingData = [], unloadingData = [];
+    rows.forEach(row => {
+        const stage = row.querySelector('.stage-select').value;
+        const stress = parseFloat(row.querySelector('.stress-cell').textContent);
+        const sett = parseFloat(row.querySelector('.settlement-input').value);
+        if (!isNaN(stress) && !isNaN(sett)) {
+            const pt = { x: stress, y: sett };
+            if (stage === 'Loading') loadingData.push(pt); 
+            else unloadingData.push(pt);
         }
+    });
+    loadingData.sort((a,b) => a.x - b.x);
+    unloadingData.sort((a,b) => b.x - a.x);
+
+    const ctx = document.getElementById('stressSettlementChart').getContext('2d');
+    if (chart) chart.destroy();
+
+    chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                { label: 'Loading', data: loadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, tension: 0.4, fill: false },
+                { label: 'Unloading', data: unloadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, borderDash: [], tension: 0.4, fill: false }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 30, right: 30, left: 10, bottom: 10 } },
+            plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: true, align: 'right', anchor: 'center', offset: 6, color: '#000', font: { weight: 'bold', size: 11 }, formatter: (v) => v.y.toFixed(3) } },
+            scales: {
+                x: { type: 'linear', position: 'top', title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, max: 4.5, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } },
+                y: { reverse: true, title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } }
+            }
+        }
+    });
+    calculateKValue(loadingData);
+}
 
         function saveToLocal() {
             const data = {
@@ -894,3 +894,4 @@
     </script>
 </body>
 </html>
+
