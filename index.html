@@ -1101,9 +1101,44 @@ function calcDIN() {
     }
 });
 
+    });
+}
+
+/* --- SWITCH STANDARD --- */
+function switchStandard(std) {
+    document.querySelectorAll('.std-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+    
+    if(std === 'ASTM') {
+        document.querySelector('button[onclick*="ASTM"]').classList.add('active');
+        document.getElementById('view-ASTM').classList.add('active');
+    } else {
+        document.querySelector('button[onclick*="DIN"]').classList.add('active');
+        document.getElementById('view-DIN').classList.add('active');
+    }
+}
+
+/* --- LOAD LOGO --- */
+function loadLogo(event, standard) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const imgId = standard === 'ASTM' ? 'companyLogo' : 'companyLogo_DIN';
+            const btnId = standard === 'ASTM' ? 'uploadLogoBtnContainer' : 'upBtn_DIN';
+            document.getElementById(imgId).src = e.target.result;
+            document.getElementById(imgId).classList.remove('hidden');
+            document.getElementById(btnId).style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
 </script>
 </body>
 </html>
+
+
 
 
 
