@@ -683,54 +683,151 @@ function autoFillSummary() {
     generateChart(); // ✅ مكان صحيح
 }
 
-// ✅ دالة generateChart خارج أي دالة تانية
 function generateChart() {
     const rows = document.querySelectorAll('#summaryBody tr');
     const loadingData = [], unloadingData = [];
+    
     rows.forEach(row => {
         const stage = row.querySelector('.stage-select').value;
         const stress = parseFloat(row.querySelector('.stress-cell').textContent);
         const sett = parseFloat(row.querySelector('.settlement-input').value);
+        
         if (!isNaN(stress) && !isNaN(sett)) {
             const pt = { x: stress, y: sett };
-            if (stage === 'Loading') loadingData.push(pt); 
+            if (stage === 'Loading') loadingData.push(pt);
             else unloadingData.push(pt);
         }
     });
+    
     loadingData.sort((a,b) => a.x - b.x);
     unloadingData.sort((a,b) => b.x - a.x);
 
+    // دمج البيانات: Loading ثم Unloading (متصلين)
+    const combinedData = [...loadingData, ...unloadingData];
+
+    // حساب أقصى إجهاد وأقصى هبوط تلقائياً
     let maxStress = 4.5;
-    if (loadingData.length > 0) {
-        const lastStress = loadingData[loadingData.length - 1].x;
-        if (lastStress > 4.5) {
-            maxStress = Math.ceil(lastStress / 0.5) * 0.5;
+    let maxSettlement = 2.0;
+    
+    if (combinedData.length > 0) {
+        const allStresses = combinedData.map(p => p.x);
+        const allSettlements = combinedData.map(p => p.y);
+        
+        const maxStressData = Math.max(...allStresses);
+        const maxSettData = Math.max(...allSettlements);
+        
+        // تكبير المحور X إذا تجاوز 4.5
+        if (maxStressData > 4.5) {
+            maxStress = Math.ceil(maxStressData / 0.5) * 0.5;
+        }
+        
+        // تكبير المحور Y إذا تجاوز 2.0
+        if (maxSettData > 2.0) {
+            maxSettlement = Math.ceil(maxSettData / 0.5) * 0.5;
         }
     }
 
     const ctx = document.getElementById('stressSettlementChart').getContext('2d');
     if (chart) chart.destroy();
-
+    
     chart = new Chart(ctx, {
         type: 'line',
         data: {
             datasets: [
-                { label: 'Loading', data: loadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, tension: 0.7, fill: false },
-                { label: 'Unloading', data: unloadingData, borderColor: '#1F4E79', backgroundColor: '#C00000', pointBackgroundColor: '#C00000', pointBorderColor: '#C00000', pointStyle: 'rectRot', pointRadius: 5, borderWidth: 2, borderDash: [5, 5], tension: 0.7, fill: false }
+                {
+                    label: 'Stress-Settlement Curve',
+                    data: combinedData,
+                    borderColor: '#1F4E79',
+                    backgroundColor: '#C00000',
+                    pointBackgroundColor: '#C00000',
+                    pointBorderColor: '#C00000',
+                    pointStyle: 'rectRot',
+                    pointRadius: 5,
+                    borderWidth: 2,
+                    segment: {
+                        // الجزء Unloading يكون منقط
+                        borderDash: ctx => {
+                            const idx = ctx.p0DataIndex;
+                            return idx >= loadingData.length ? [5, 5] : undefined;
+                        }
+                    },
+                    tension: 0,
+                    fill: false
+                }
             ]
         },
         options: {
-            responsive: true, maintainAspectRatio: false,
-            layout: { padding: { top: 30, right: 30, left: 10, bottom: 10 } },
-            plugins: { legend: { display: false }, tooltip: { enabled: false }, datalabels: { display: true, align: 'right', anchor: 'center', offset: 6, color: '#000', font: { weight: 'bold', size: 11 }, formatter: (v) => v.y.toFixed(3) } },
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: {
+                padding: { top: 30, right: 30, left: 10, bottom: 10 }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+                datalabels: {
+                    display: true,
+                    align: function(context) {
+                        const idx = context.dataIndex;
+                        // Loading: يمين، Unloading: شمال
+                        return idx < loadingData.length ? 'right' : 'left';
+                    },
+                    anchor: 'center',
+                    offset: 8,
+                    color: '#000',
+                    font: { weight: 'bold', size: 11 },
+                    formatter: function(value, context) {
+                        // إخفاء الرقم الأول (0,0)
+                        if (context.dataIndex === 0) {
+                            return '';
+                        }
+                        return value.y.toFixed(3);
+                    }
+                }
+            },
             scales: {
-                x: { type: 'linear', position: 'top', title: { display: true, text: 'Stress (kg/cm²)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, max: maxStress, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } },
-                y: { reverse: true, title: { display: true, text: 'Settlement (mm)', font: {weight:'bold', size: 12}, color: '#000' }, min: 0, grid: { color: '#000', lineWidth: 0.5 }, ticks: { color: '#000', font: {weight:'bold'} } }
+                x: {
+                    type: 'linear',
+                    position: 'top',
+                    title: {
+                        display: true,
+                        text: 'Stress (kg/cm²)',
+                        font: { weight: 'bold', size: 12 },
+                        color: '#000'
+                    },
+                    min: 0,
+                    max: maxStress,
+                    grid: { color: '#000', lineWidth: 0.5 },
+                    ticks: { 
+                        color: '#000', 
+                        font: { weight: 'bold' },
+                        stepSize: 0.5
+                    }
+                },
+                y: {
+                    reverse: true,
+                    title: {
+                        display: true,
+                        text: 'Settlement (mm)',
+                        font: { weight: 'bold', size: 12 },
+                        color: '#000'
+                    },
+                    min: 0,
+                    max: maxSettlement,
+                    grid: { color: '#000', lineWidth: 0.5 },
+                    ticks: { 
+                        color: '#000', 
+                        font: { weight: 'bold' },
+                        stepSize: 0.5
+                    }
+                }
             }
         }
     });
+    
     calculateKValue(loadingData);
 }
+
 
 function saveToLocal() {
     const data = {
@@ -917,5 +1014,6 @@ function calcDIN() {
 </script>
 </body>
 </html>
+
 
 
