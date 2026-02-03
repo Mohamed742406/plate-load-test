@@ -166,12 +166,13 @@
                 <div class="flex flex-wrap justify-center gap-6 items-center">
                     <label class="font-bold text-blue-900">
                         وحدة قياس العداد (Gauge Unit):
-                        <select id="gauge_unit" class="p-1 border rounded dir-ltr" onchange="updateCalculations()">
-                            <option value="MPa">MPa (ميجاباسكال)</option>
-                            <option value="Bar">Bar (بار)</option>
-                            <option value="psi">psi (رطل/بوصة²)</option>
-                            <option value="kg_cm2">kg/cm² (كجم/سم²)</option>
-                        </select>
+                     <select id="gaugeunit" class="p-1 border rounded dir-ltr" onchange="updateCalculations()">
+                     <option value="MPa">MPa (ميجاباسكال)</option>
+                    <option value="Bar">Bar (بار)</option>
+                     <option value="psi">psi (رطل/بوصة²)</option>
+                      <option value="kgcm2">kg/cm² (كجم/سم²)</option>
+                    </select>
+
                     </label>
                     <span class="text-gray-400">|</span>
                     <label class="font-bold text-blue-900">
@@ -916,3 +917,4 @@ function calcDIN() {
 </script>
 </body>
 </html>
+
