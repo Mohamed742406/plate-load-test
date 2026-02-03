@@ -730,102 +730,119 @@ function generateChart() {
     const ctx = document.getElementById('stressSettlementChart').getContext('2d');
     if (chart) chart.destroy();
     
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            datasets: [
-                {
-                    label: 'Stress-Settlement Curve',
-                    data: combinedData,
-                    borderColor: '#1F4E79',
-                    backgroundColor: '#C00000',
-                    pointBackgroundColor: '#C00000',
-                    pointBorderColor: '#C00000',
-                    pointStyle: 'rectRot',
-                    pointRadius: 5,
-                    borderWidth: 2,
-                    segment: {
-                        // الجزء Unloading يكون منقط
-                        borderDash: ctx => {
-                            const idx = ctx.p0DataIndex;
-                            return idx >= loadingData.length ? [5, 5] : undefined;
-                        }
-                    },
-                    tension: 0,
-                    fill: false
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            layout: {
-                padding: { top: 30, right: 30, left: 10, bottom: 10 }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false },
-                datalabels: {
-                    display: true,
-                    align: function(context) {
-                        const idx = context.dataIndex;
-                        // Loading: يمين، Unloading: شمال
-                        return idx < loadingData.length ? 'right' : 'left';
-                    },
-                    anchor: 'center',
-                    offset: 8,
-                    color: '#000',
-                    font: { weight: 'bold', size: 11 },
-                    formatter: function(value, context) {
-                        // إخفاء الرقم الأول (0,0)
-                        if (context.dataIndex === 0) {
-                            return '';
-                        }
-                        return value.y.toFixed(3);
-                    }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'top',
-                    title: {
-                        display: true,
-                        text: 'Stress (kg/cm²)',
-                        font: { weight: 'bold', size: 12 },
-                        color: '#000'
-                    },
-                    min: 0,
-                    max: maxStress,
-                    grid: { color: '#000', lineWidth: 0.5 },
-                    ticks: { 
-                        color: '#000', 
-                        font: { weight: 'bold' },
-                        stepSize: 0.5
+chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        datasets: [
+            {
+                label: 'Stress-Settlement Curve',
+                data: combinedData,
+                borderColor: '#1F4E79',
+                backgroundColor: '#C00000',
+                pointBackgroundColor: '#C00000',
+                pointBorderColor: '#C00000',
+                pointStyle: 'rectRot',
+                pointRadius: 5,
+                borderWidth: 2,
+                segment: {
+                    // الجزء Unloading يكون منقط
+                    borderDash: ctx => {
+                        const idx = ctx.p0DataIndex;
+                        return idx >= loadingData.length ? [5, 5] : undefined;
                     }
                 },
-                y: {
-                    reverse: true,
-                    title: {
-                        display: true,
-                        text: 'Settlement (mm)',
-                        font: { weight: 'bold', size: 12 },
-                        color: '#000'
-                    },
-                    min: 0,
-                    max: maxSettlement,
-                    grid: { color: '#000', lineWidth: 0.5 },
-                    ticks: { 
-                        color: '#000', 
-                        font: { weight: 'bold' },
-                        stepSize: 0.5
+                tension: 0,
+                fill: false
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        layout: {
+            padding: { top: 40, right: 50, left: 10, bottom: 10 }
+        },
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: false },
+            datalabels: {
+                display: true,
+                align: function(context) {
+                    const idx = context.dataIndex;
+                    const isLoading = idx < loadingData.length;
+                    
+                    // آخر نقطة في Loading: نحطها فوق
+                    if (isLoading && idx === loadingData.length - 1) {
+                        return 'top';
                     }
+                    
+                    // باقي Loading: يمين، Unloading: شمال
+                    return isLoading ? 'right' : 'left';
+                },
+                anchor: function(context) {
+                    const idx = context.dataIndex;
+                    const isLoading = idx < loadingData.length;
+                    
+                    // آخر نقطة في Loading: anchor فوق
+                    if (isLoading && idx === loadingData.length - 1) {
+                        return 'end';
+                    }
+                    
+                    return 'center';
+                },
+                offset: 8,
+                color: '#000',
+                font: { weight: 'bold', size: 11 },
+                formatter: function(value, context) {
+                    // إخفاء الرقم الأول (0,0)
+                    if (context.dataIndex === 0) {
+                        return '';
+                    }
+                    return value.y.toFixed(3);
+                }
+            }
+        },
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'top',
+                title: {
+                    display: true,
+                    text: 'Stress (kg/cm²)',
+                    font: { weight: 'bold', size: 12 },
+                    color: '#000'
+                },
+                min: 0,
+                max: maxStress,
+                grid: { color: '#000', lineWidth: 0.5 },
+                ticks: { 
+                    color: '#000', 
+                    font: { weight: 'bold' },
+                    stepSize: 0.5
+                }
+            },
+            y: {
+                reverse: true,
+                title: {
+                    display: true,
+                    text: 'Settlement (mm)',
+                    font: { weight: 'bold', size: 12 },
+                    color: '#000'
+                },
+                min: 0,
+                max: maxSettlement,
+                grid: { color: '#000', lineWidth: 0.5 },
+                ticks: { 
+                    color: '#000', 
+                    font: { weight: 'bold' },
+                    stepSize: 0.5
                 }
             }
         }
-    });
-    
-    calculateKValue(loadingData);
+    }
+});
+
+calculateKValue(loadingData);
 }
 
 
@@ -1014,6 +1031,7 @@ function calcDIN() {
 </script>
 </body>
 </html>
+
 
 
 
