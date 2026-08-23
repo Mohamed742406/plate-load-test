@@ -100,7 +100,47 @@
             .report-container { box-shadow: none; max-width: 100%; width: 100%; margin: 0; padding: 0; }
             .tabs-nav { display: none !important; }
             #tab1Content, #tab2Content { page-break-after: always; border-bottom: none !important; }
+            body.din-custom-print .view-section { display: none !important; }
+            body.din-custom-print .print-only-report { display: block !important; }
         }
+        .print-only-report { display: none; }
+
+        /* ===== Report Builder (customize-before-print) ===== */
+        .rb-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+            z-index: 5000; align-items: center; justify-content: center;
+        }
+        .rb-overlay.active { display: flex; }
+        .rb-panel {
+            background: #fff; width: 92%; max-width: 900px; max-height: 90vh;
+            border-radius: 10px; display: flex; flex-direction: column; overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .rb-panel-header { padding: 15px 20px; border-bottom: 2px solid #eee; background: #f8f9fa; }
+        .rb-panel-header h3 { margin: 0; font-size: 1.1em; }
+        .rb-blocks-container { flex: 1; overflow-y: auto; padding: 15px 20px; background: #f0f2f5; }
+        .rb-panel-footer { padding: 12px 20px; border-top: 2px solid #eee; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; background: #f8f9fa; }
+
+        .rb-block { background: #fff; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
+        .rb-block-header {
+            display: flex; align-items: center; justify-content: space-between; gap: 6px;
+            background: #34495e; color: #fff; padding: 6px 10px; font-size: 12px; flex-wrap: wrap;
+        }
+        .rb-block-title { font-weight: bold; }
+        .rb-block-controls { display: flex; gap: 4px; align-items: center; }
+        .rb-icon-btn {
+            background: rgba(255,255,255,0.15); border: none; color: #fff; border-radius: 4px;
+            padding: 3px 7px; cursor: pointer; font-size: 12px; line-height: 1;
+        }
+        .rb-icon-btn:hover { background: rgba(255,255,255,0.3); }
+        .rb-icon-btn.danger { background: #dc3545; }
+        .rb-block-body { padding: 10px; font-size: 12px; overflow-x: auto; }
+        .rb-block-body[contenteditable="true"] { outline: none; cursor: text; }
+        .rb-block-body[contenteditable="true"]:focus { box-shadow: inset 0 0 0 2px #0066cc33; }
+        .rb-block.rb-hidden { display: none; }
+        .rb-del-row { background: #dc3545; color: #fff; border: none; border-radius: 3px; padding: 1px 6px; cursor: pointer; font-size: 11px; }
+        .rb-table th, .rb-table td { border: 1px solid #ccc; padding: 4px 6px; text-align: center; }
+        .rb-table { width: 100%; border-collapse: collapse; }
     </style>
 </head>
 <body>
@@ -400,68 +440,179 @@
                 </div>
                 <div class="w-2/4 text-center din-header">
                     <h1 class="text-xl font-bold">اختبار تحميل اللوح (DIN 18134)<br><span class="text-sm font-normal">Plate Loading Test</span></h1>
-                    <h2 class="text-sm text-gray-600">Strain Modulus Ev Calculation</h2>
+                    <h2 class="text-sm text-gray-600">Strain Modulus E<sub>V</sub> &amp; Modulus of Subgrade Reaction k<sub>S</sub></h2>
                 </div>
                 <div class="w-1/4"></div>
             </div>
 
+            <div class="no-print mb-4 flex gap-2 justify-center flex-wrap">
+                <button onclick="openReportBuilder()" class="btn btn-success">🖨️ طباعة / تخصيص التقرير النهائي</button>
+                <button onclick="saveDinData()" class="btn btn-primary">💾 حفظ البيانات</button>
+                <label class="btn btn-warning" style="cursor:pointer;">📂 استرجاع البيانات
+                    <input type="file" accept=".json" class="hidden" onchange="loadDinData(event)">
+                </label>
+                <button onclick="loadDinExample()" class="btn" style="background:#8e44ad; color:#fff;">🧪 مثال تجريبي (بيانات المواصفة)</button>
+            </div>
+
             <table class="mb-4">
-                <tr><th width="20%">Project</th><td><input type="text"></td><th width="20%">Date</th><td><input type="date"></td></tr>
-                <tr><th>Client</th><td><input type="text"></td><th>Test No.</th><td><input type="text"></td></tr>
+                <tr><th width="20%">Project</th><td><input type="text" id="din_project"></td><th width="20%">Date</th><td><input type="date" id="din_date"></td></tr>
+                <tr><th>Client</th><td><input type="text" id="din_client"></td><th>Test No.</th><td><input type="text" id="din_testno"></td></tr>
+                <tr><th>Soil Type</th><td><input type="text" id="din_soiltype"></td><th>Bedding Material</th><td><input type="text" id="din_bedding" placeholder="Sand / Gypsum plaster / Direct"></td></tr>
+                <tr><th>Weather / Temp.</th><td><input type="text" id="din_weather"></td><th>Tested By</th><td><input type="text" id="din_testedby"></td></tr>
             </table>
 
-            <div class="din-result-box" style="margin-top:0; margin-bottom:20px; padding:10px;">
-                <div class="flex justify-center gap-10">
-                    <label><b>Plate Diameter (d):</b> <input type="number" id="din_dia" value="300" style="width:60px;"> mm</label>
+            <!-- ============ SECTION 1: STRAIN MODULUS Ev (Clause 8.2) ============ -->
+            <div class="section-title" style="margin-top:10px;">
+                <span class="ar-text">القسم الأول: حساب معامل الانفعال Ev (البند 8.2)</span>
+                <small class="en-sub">Section 1: Strain Modulus E<sub>V</sub> Calculation (Clause 8.2)</small>
+            </div>
+
+            <div class="din-result-box" style="margin-top:10px; margin-bottom:20px; padding:15px;">
+                <div class="flex justify-center gap-10 flex-wrap" style="align-items:center;">
+                    <label><b>Plate Diameter (d):</b>
+                        <select id="din_dia" style="width:110px; padding:4px; border-radius:4px;" onchange="updateDinPlateInfo()">
+                            <option value="300">300 mm</option>
+                            <option value="600">600 mm</option>
+                            <option value="762">762 mm</option>
+                        </select>
+                    </label>
                     <label><b>Plate Radius (r):</b> <span id="din_rad">150</span> mm</label>
+                    <label><b>Designation:</b> <span id="din_designation">Test DIN 18134 — 300</span></label>
+                </div>
+                <div class="mt-2 text-center" style="font-size:12px; background:#fff; border-radius:6px; padding:8px;" id="din_guidance">
+                    <!-- filled by JS: preload + max stress/settlement guidance per 7.4 / 7.5.2 -->
                 </div>
             </div>
 
+            <p class="no-print" style="text-align:center; font-size:12px; color:#555; margin-bottom:10px;">
+                * طبقاً للبند 7.5.2: لا يقل عدد مراحل التحميل عن 6 مراحل (بخلاف مرحلة الحمل الابتدائي "Stage 0"). يتم إهمال Stage 0 عند حساب معاملات المنحنى للحمل الأول فقط، بينما تدخل Stage 9 (بداية الحمل الثاني) في حسابات الحمل الثاني.
+            </p>
+
             <div class="grid grid-cols-1 gap-4">
                 <div>
-                    <div class="cycle-header">1st Loading Cycle</div>
+                    <div class="cycle-header">1st Loading Cycle <span class="en-sub" style="font-weight:normal;">(Stage 0 = Preload, excluded from curve fit)</span></div>
                     <table id="dinTable1">
-                        <thead><tr class="bg-gray-100"><th>Load (MN/m²) (σ)</th><th>Settlement (mm) (s)</th><th class="no-print">Del</th></tr></thead>
+                        <thead><tr class="bg-gray-100"><th width="15%">Stage</th><th>Normal Stress σ₀ (MN/m²)</th><th>Settlement s (mm)</th><th class="no-print" width="10%">Del</th></tr></thead>
                         <tbody></tbody>
                     </table>
-                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTable1')">+</button></div>
+                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTable1')">+ Add Stage</button></div>
                 </div>
                 <div>
-                    <div class="cycle-header" style="background:#7f8c8d;">Unloading</div>
+                    <div class="cycle-header" style="background:#7f8c8d;">Unloading (100% → 50% → 25% → ~2%)</div>
                     <table id="dinTableUnload">
-                        <thead><tr class="bg-gray-100"><th>Load (MN/m²)</th><th>Settlement (mm)</th><th class="no-print">Del</th></tr></thead>
+                        <thead><tr class="bg-gray-100"><th width="15%">Stage</th><th>Normal Stress σ₀ (MN/m²)</th><th>Settlement s (mm)</th><th class="no-print" width="10%">Del</th></tr></thead>
                         <tbody></tbody>
                     </table>
-                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTableUnload')">+</button></div>
+                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTableUnload')">+ Add Stage</button></div>
                 </div>
                 <div>
-                    <div class="cycle-header" style="background:#27ae60;">2nd Loading Cycle</div>
+                    <div class="cycle-header" style="background:#27ae60;">2nd Loading Cycle <span class="en-sub" style="font-weight:normal;">(up to penultimate stage of 1st cycle)</span></div>
                     <table id="dinTable2">
-                        <thead><tr class="bg-gray-100"><th>Load (MN/m²)</th><th>Settlement (mm)</th><th class="no-print">Del</th></tr></thead>
+                        <thead><tr class="bg-gray-100"><th width="15%">Stage</th><th>Normal Stress σ₀ (MN/m²)</th><th>Settlement s (mm)</th><th class="no-print" width="10%">Del</th></tr></thead>
                         <tbody></tbody>
                     </table>
-                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTable2')">+</button></div>
+                    <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTable2')">+ Add Stage</button></div>
                 </div>
             </div>
 
             <div class="no-print text-center mt-6">
-                <button class="btn btn-success" onclick="calcDIN()">🚀 Calculate Ev</button>
+                <button class="btn btn-success" onclick="calcDIN()">🚀 Calculate E<sub>V</sub></button>
             </div>
 
             <div class="din-result-box">
                 <div class="flex justify-around items-center flex-wrap">
+                    <div><div class="text-gray-600 text-sm">σ₀max</div><div class="text-xl font-bold" id="res_sigmax">0.00 MN/m²</div></div>
                     <div><div class="text-gray-600 text-sm">Ev1</div><div class="text-2xl font-bold text-blue-800" id="res_ev1">0.00 MN/m²</div></div>
                     <div><div class="text-gray-600 text-sm">Ev2</div><div class="text-2xl font-bold text-green-800" id="res_ev2">0.00 MN/m²</div></div>
-                    <div><div class="text-gray-600 text-sm">Ratio</div><div class="text-3xl font-extrabold text-orange-600" id="res_ratio">0.00</div></div>
+                    <div><div class="text-gray-600 text-sm">Ev2 / Ev1</div><div class="text-3xl font-extrabold text-orange-600" id="res_ratio">0.00</div></div>
                 </div>
             </div>
+
+            <table class="mb-4" id="dinResultsTable">
+                <thead><tr class="bg-gray-100"><th>Parameter</th><th>1st Loading Cycle</th><th>2nd Loading Cycle</th></tr></thead>
+                <tbody>
+                    <tr><td>a₀ (mm)</td><td id="rt_a0_1">-</td><td id="rt_a0_2">-</td></tr>
+                    <tr><td>a₁ (mm/(MN/m²))</td><td id="rt_a1_1">-</td><td id="rt_a1_2">-</td></tr>
+                    <tr><td>a₂ (mm/(MN²/m⁴))</td><td id="rt_a2_1">-</td><td id="rt_a2_2">-</td></tr>
+                    <tr><td>Ev = 1.5·r / (a₁ + a₂·σ₀max)</td><td id="rt_ev_1">-</td><td id="rt_ev_2">-</td></tr>
+                </tbody>
+            </table>
 
             <div class="mt-6" style="height: 500px; border:1px solid #ccc; padding:10px;">
                 <canvas id="chartDIN"></canvas>
             </div>
-            
+
+            <!-- ============ SECTION 2: MODULUS OF SUBGRADE REACTION ks (Clause 8.3 / 7.5.3) ============ -->
+            <div class="section-title" style="margin-top:40px;">
+                <span class="ar-text">القسم الثاني: حساب معامل رد فعل التربة ks (البند 8.3 / 7.5.3)</span>
+                <small class="en-sub">Section 2: Modulus of Subgrade Reaction k<sub>S</sub> (Clause 8.3 / 7.5.3)</small>
+            </div>
+
+            <div class="din-result-box" style="margin-top:10px; margin-bottom:20px; padding:15px;">
+                <div class="flex justify-center gap-10 flex-wrap" style="align-items:center;">
+                    <label><b>Plate Diameter:</b> 762 mm <span class="en-sub">(mandatory per 7.5.3)</span></label>
+                    <label><b>Designation:</b> Test DIN 18134 — 762</label>
+                </div>
+                <p style="text-align:center; font-size:12px; margin-top:8px;">
+                    طبقاً للبند 7.5.3: يُستخدم قطر لوح 762 مم فقط. حمل ابتدائي 0.005 MN/m² حتى يقل معدل الهبوط عن 0.02 مم/دقيقة، ثم يُطبق الحمل على مراحل بإجهادات 0.04 - 0.08 - 0.14 - 0.20 MN/m²، ويُفرغ الحمل على مرحلة وسيطة عند 0.08 MN/m².
+                </p>
+            </div>
+
+            <div>
+                <div class="cycle-header" style="background:#8e44ad;">Load-Settlement Readings (Table 5 style)</div>
+                <table id="dinTableKs">
+                    <thead><tr class="bg-gray-100"><th width="15%">Stage</th><th>Normal Stress σ₀ (MN/m²)</th><th>Settlement s (mm)</th><th class="no-print" width="10%">Del</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <div class="no-print text-center"><button class="btn btn-primary" onclick="addDinRow('dinTableKs')">+ Add Stage</button></div>
+            </div>
+
+            <div class="din-result-box" style="margin-top:15px;">
+                <div class="flex justify-center gap-10 flex-wrap" style="align-items:center;">
+                    <label><b>Origin Correction 0* (mm):</b>
+                        <input type="number" id="ks_origin_correction" value="0" step="0.01" style="width:90px;">
+                        <small class="en-sub">(tangent-at-inflection graphical correction, see Fig. 5 / Annex example)</small>
+                    </label>
+                    <label><b>Reference Settlement s* (mm):</b> 1.25 <small class="en-sub">(fixed per Eq. 4)</small></label>
+                </div>
+            </div>
+
+            <div class="no-print text-center mt-4">
+                <button class="btn btn-success" onclick="calcDinKs()">🚀 Calculate k<sub>S</sub></button>
+            </div>
+
+            <div class="din-result-box">
+                <div class="flex justify-around items-center flex-wrap">
+                    <div><div class="text-gray-600 text-sm">σ₀ @ s* = 1.25 mm</div><div class="text-xl font-bold" id="res_ks_sigma">0.00 MN/m²</div></div>
+                    <div><div class="text-gray-600 text-sm">k<sub>S</sub> = σ₀ / s* (s* in m)</div><div class="text-3xl font-extrabold text-purple-800" id="res_ks">0.00 MN/m³</div></div>
+                </div>
+            </div>
+
+            <div class="mt-6" style="height: 420px; border:1px solid #ccc; padding:10px;">
+                <canvas id="chartDinKs"></canvas>
+            </div>
+
             <div class="mt-8 pt-4 border-t border-gray-400 text-center">
                 <p>إعداد وتطوير: م/ محمد أحمد القصبي</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden container: populated right before printing with the customized report -->
+    <div id="dinPrintCustomArea" class="print-only-report report-container"></div>
+
+    <!-- ============ Report Builder Modal (customize before printing) ============ -->
+    <div id="reportBuilderOverlay" class="rb-overlay no-print">
+        <div class="rb-panel">
+            <div class="rb-panel-header">
+                <h3>🧩 تخصيص التقرير النهائي قبل الطباعة</h3>
+                <p style="font-size:12px; color:#666; margin:4px 0 0;">رتّب الأقسام (⬆⬇)، كبّر/صغّر الجدول (A- / A+)، عدّل أي نص بالضغط عليه مباشرة، احذف صف بزر 🗑 بجواره، أو احذف قسم كامل بزر 🗑 في عنوانه.</p>
+            </div>
+            <div id="rbBlocksContainer" class="rb-blocks-container"></div>
+            <div class="rb-panel-footer">
+                <button class="btn btn-primary" onclick="reloadReportBuilder()">↺ إعادة التحميل من البيانات الحالية</button>
+                <button class="btn btn-success" onclick="printCustomReport()">🖨️ طباعة هذا التقرير</button>
+                <button class="btn btn-danger" onclick="closeReportBuilder()">✖ إغلاق</button>
             </div>
         </div>
     </div>
@@ -512,9 +663,15 @@
             generateChart();
             
             // تهيئة DIN افتراضياً
-            addDinRow('dinTable1'); addDinRow('dinTable1');
-            addDinRow('dinTableUnload');
-            addDinRow('dinTable2'); addDinRow('dinTable2');
+            // Ev cycle 1: Stage 0 (preload) + not less than 6 loading stages => 7 rows (matches Table 2 example)
+            for (let i = 0; i < 7; i++) addDinRow('dinTable1');
+            // Unloading: 3 stages (100% -> 50% -> 25% -> ~2%, i.e. 3 release steps after max load)
+            for (let i = 0; i < 3; i++) addDinRow('dinTableUnload');
+            // Ev cycle 2: Stage 9 (repeat of last unload point) + up to penultimate stage of cycle 1 => 6 rows (matches Table 3 example)
+            for (let i = 0; i < 6; i++) addDinRow('dinTable2');
+            // ks table: preload + 4 loading stages + 1 intermediate unload + final zero => 7 rows (matches Table 5 example)
+            for (let i = 0; i < 7; i++) addDinRow('dinTableKs');
+            updateDinPlateInfo();
         });
 
         // دوال ASTM القديمة (مع التعديلات للوحدات)
@@ -961,16 +1118,47 @@ function polyFit(xArr, yArr) {
     }
 }
 
+/* ===================== DIN 18134 — shared helpers ===================== */
 let chartDIN_Obj = null;
-function addDinRow(tableId) {
-    const row = `<tr><td><input type="number" step="0.01"></td><td><input type="number" step="0.01"></td><td class="no-print"><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">×</button></td></tr>`;
-    document.getElementById(tableId).querySelector('tbody').insertAdjacentHTML('beforeend', row);
+let chartDinKs_Obj = null;
+
+function renumberStages(tableId) {
+    document.querySelectorAll(`#${tableId} tbody tr`).forEach((tr, idx) => {
+        const stageCell = tr.querySelector('.din-stage-no');
+        if (stageCell) stageCell.innerText = idx;
+    });
 }
 
-document.getElementById('din_dia')?.addEventListener('input', function() {
-    document.getElementById('din_rad').innerText = (this.value / 2).toFixed(1);
-});
+function addDinRow(tableId) {
+    const row = `<tr>
+        <td class="din-stage-no" style="font-weight:bold; color:#555;">0</td>
+        <td><input type="number" step="0.001"></td>
+        <td><input type="number" step="0.01"></td>
+        <td class="no-print"><button class="btn btn-danger btn-sm" onclick="this.closest('tr').remove(); renumberStages('${tableId}');">×</button></td>
+    </tr>`;
+    document.getElementById(tableId).querySelector('tbody').insertAdjacentHTML('beforeend', row);
+    renumberStages(tableId);
+}
 
+/* Plate-size dependent guidance per Clause 7.4 (preload) and 7.5.2 (road-construction limits) */
+const DIN_PLATE_GUIDANCE = {
+    '300': { preload: '0.01 MN/m²', maxStress: '0.5 MN/m²', maxSettlement: '5 mm' },
+    '600': { preload: '0.01 MN/m²', maxStress: '0.25 MN/m²', maxSettlement: '8 mm' },
+    '762': { preload: '0.005 MN/m²', maxStress: '0.2 MN/m²', maxSettlement: '13 mm' }
+};
+
+function updateDinPlateInfo() {
+    const dSel = document.getElementById('din_dia');
+    const d = dSel ? dSel.value : '300';
+    document.getElementById('din_rad').innerText = (d / 2).toFixed(1);
+    document.getElementById('din_designation').innerText = `Test DIN 18134 — ${d}`;
+    const g = DIN_PLATE_GUIDANCE[d] || DIN_PLATE_GUIDANCE['300'];
+    document.getElementById('din_guidance').innerHTML =
+        `<b>Preload (7.4):</b> ${g.preload} &nbsp;|&nbsp; ` +
+        `<b>Limit values (7.5.2, road construction):</b> σ₀ ≤ ${g.maxStress} or s ≤ ${g.maxSettlement} (whichever reached first)`;
+}
+
+/* ===================== SECTION 1: Strain modulus Ev (Clause 8.2 / Annex B) ===================== */
 function calcDIN() {
     let getData = (id) => {
         let arr = [];
@@ -982,30 +1170,48 @@ function calcDIN() {
         return arr;
     };
     let data1 = getData('dinTable1'), dataUn = getData('dinTableUnload'), data2 = getData('dinTable2');
-    if(data1.length < 3 || data2.length < 3) { alert("Add at least 3 points!"); return; }
+
+    if(data1.length < 7) { alert("القسم الأول (الحمل الأول) يجب ألا يقل عن 7 قراءات (Stage 0 + 6 مراحل تحميل على الأقل حسب البند 7.5.2)."); return; }
+    if(data2.length < 3) { alert("القسم الثالث (الحمل الثاني) يحتاج 3 قراءات على الأقل."); return; }
 
     let r_mm = parseFloat(document.getElementById('din_rad').innerText);
-    let sigma_max1 = data1[data1.length-1].x;
 
-    let x1 = data1.map(p=>p.x), y1 = data1.map(p=>p.y);
+    // σ0max is the MAXIMUM stress reached in the FIRST loading cycle (not necessarily the last row)
+    let sigma_max1 = Math.max(...data1.map(p => p.x));
+
+    // Per 8.2: neglect the first stage (Stage 0 / preload) of the FIRST loading cycle when fitting
+    let fitData1 = data1.slice(1);
+    let x1 = fitData1.map(p=>p.x), y1 = fitData1.map(p=>p.y);
     let coeffs1 = polyFit(x1, y1);
     let Ev1 = 1.5 * r_mm * (1 / (coeffs1[1] + coeffs1[2] * sigma_max1));
 
+    // Per 8.2: the first stage of the SECOND loading cycle IS taken into account (no exclusion)
     let x2 = data2.map(p=>p.x), y2 = data2.map(p=>p.y);
     let coeffs2 = polyFit(x2, y2);
-    let Ev2 = 1.5 * r_mm * (1 / (coeffs2[1] + coeffs2[2] * sigma_max1)); 
-    
+    // σ0max from the FIRST loading cycle is reused for the second cycle's Ev formula
+    let Ev2 = 1.5 * r_mm * (1 / (coeffs2[1] + coeffs2[2] * sigma_max1));
+
+    document.getElementById('res_sigmax').innerText = sigma_max1.toFixed(3) + " MN/m²";
     document.getElementById('res_ev1').innerText = Ev1.toFixed(2) + " MN/m²";
     document.getElementById('res_ev2').innerText = Ev2.toFixed(2) + " MN/m²";
     document.getElementById('res_ratio').innerText = (Ev2/Ev1).toFixed(2);
 
-    let genCurve = (coeffs, maxX) => {
+    document.getElementById('rt_a0_1').innerText = coeffs1[0].toFixed(3);
+    document.getElementById('rt_a1_1').innerText = coeffs1[1].toFixed(3);
+    document.getElementById('rt_a2_1').innerText = coeffs1[2].toFixed(3);
+    document.getElementById('rt_ev_1').innerText = Ev1.toFixed(2) + " MN/m²";
+    document.getElementById('rt_a0_2').innerText = coeffs2[0].toFixed(3);
+    document.getElementById('rt_a1_2').innerText = coeffs2[1].toFixed(3);
+    document.getElementById('rt_a2_2').innerText = coeffs2[2].toFixed(3);
+    document.getElementById('rt_ev_2').innerText = Ev2.toFixed(2) + " MN/m²";
+
+    let genCurve = (coeffs, minX, maxX) => {
         let pts = [];
-        for(let x=0; x<=maxX; x+=maxX/20) pts.push({x: x, y: coeffs[0] + coeffs[1]*x + coeffs[2]*x*x});
+        for(let x=minX; x<=maxX; x+=(maxX-minX)/20) pts.push({x: x, y: coeffs[0] + coeffs[1]*x + coeffs[2]*x*x});
         return pts;
     };
-    let curve1 = genCurve(coeffs1, sigma_max1);
-    let curve2 = genCurve(coeffs2, data2[data2.length-1].x);
+    let curve1 = genCurve(coeffs1, x1[0], sigma_max1);
+    let curve2 = genCurve(coeffs2, x2[0], Math.max(...x2));
 
     if(chartDIN_Obj) chartDIN_Obj.destroy();
     const ctx = document.getElementById('chartDIN').getContext('2d');
@@ -1013,25 +1219,439 @@ function calcDIN() {
         type: 'scatter',
         data: {
             datasets: [
-                { label: 'Cycle 1', data: data1, backgroundColor: 'blue' },
-                { label: 'Fit 1', data: curve1, type:'line', borderColor:'blue', pointRadius:0, fill:false },
-                { label: 'Unload', data: dataUn, type:'line', borderColor:'gray', borderDash:[5,5], fill:false },
-                { label: 'Cycle 2', data: data2, backgroundColor: 'green' },
+                { label: 'Cycle 1 (points)', data: data1, backgroundColor: 'blue' },
+                { label: 'Fit 1 (excl. Stage 0)', data: curve1, type:'line', borderColor:'blue', pointRadius:0, fill:false },
+                { label: 'Unload', data: dataUn, type:'line', borderColor:'gray', borderDash:[5,5], fill:false, showLine:true },
+                { label: 'Cycle 2 (points)', data: data2, backgroundColor: 'green' },
                 { label: 'Fit 2', data: curve2, type:'line', borderColor:'green', pointRadius:0, fill:false }
             ]
         },
         options: {
             scales: {
-                x: { type:'linear', position:'top', title:{display:true, text:'Stress (MN/m²)'} },
-                y: { reverse:true, title:{display:true, text:'Settlement (mm)'} }
+                x: { type:'linear', position:'top', title:{display:true, text:'Normal stress σ₀ (MN/m²)'} },
+                y: { reverse:true, title:{display:true, text:'Settlement s (mm)'} }
             }
         }
     });
 }
+
+/* ===================== SECTION 2: Modulus of subgrade reaction ks (Clause 8.3 / 7.5.3) ===================== */
+function calcDinKs() {
+    let arr = [];
+    document.querySelectorAll('#dinTableKs tbody tr').forEach(tr => {
+        let ins = tr.querySelectorAll('input');
+        let s = parseFloat(ins[0].value), set = parseFloat(ins[1].value);
+        if(!isNaN(s) && !isNaN(set)) arr.push({x:s, y:set});
+    });
+    if(arr.length < 4) { alert("أضف 4 قراءات على الأقل (حمل ابتدائي + مراحل التحميل حتى 0.2 MN/m²)."); return; }
+
+    const originCorrection = parseFloat(document.getElementById('ks_origin_correction').value) || 0;
+    const sTarget = 1.25; // fixed per Equation (4)
+
+    // Use only the loading branch (ascending stress) for interpolation, sorted by stress
+    let loadingPts = arr.slice().sort((a,b) => a.x - b.x);
+    // Apply graphical origin correction: corrected settlement s* = s - correction
+    let corrected = loadingPts.map(p => ({ x: p.x, y: p.y - originCorrection }));
+
+    // Linear interpolation to find sigma0 at s* = 1.25 mm
+    let sigmaAtTarget = null;
+    for (let i = 0; i < corrected.length - 1; i++) {
+        let p1 = corrected[i], p2 = corrected[i+1];
+        if ((p1.y <= sTarget && p2.y >= sTarget) || (p1.y >= sTarget && p2.y <= sTarget)) {
+            if (p2.y === p1.y) { sigmaAtTarget = p1.x; }
+            else {
+                let t = (sTarget - p1.y) / (p2.y - p1.y);
+                sigmaAtTarget = p1.x + t * (p2.x - p1.x);
+            }
+            break;
+        }
+    }
+    if (sigmaAtTarget === null) {
+        alert("تعذر إيجاد σ₀ عند s* = 1.25 مم — تأكد أن قراءات الهبوط تغطي هذه القيمة (بعد تصحيح نقطة الأصل إذا لزم).");
+        return;
+    }
+
+    const ks = sigmaAtTarget / 0.00125; // Equation (4): ks = σ0 / s*(in m)
+
+    document.getElementById('res_ks_sigma').innerText = sigmaAtTarget.toFixed(3) + " MN/m²";
+    document.getElementById('res_ks').innerText = ks.toFixed(1) + " MN/m³";
+
+    if(chartDinKs_Obj) chartDinKs_Obj.destroy();
+    const ctx = document.getElementById('chartDinKs').getContext('2d');
+    chartDinKs_Obj = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: [
+                { label: 'Measured (raw)', data: arr, backgroundColor: 'purple' },
+                { label: 'Corrected curve', data: corrected, type:'line', borderColor:'purple', pointRadius:2, fill:false, showLine:true },
+                { label: `s* = 1.25 mm @ σ₀ = ${sigmaAtTarget.toFixed(3)}`, data: [{x:sigmaAtTarget, y:sTarget}], backgroundColor:'red', pointRadius:6, pointStyle:'triangle' }
+            ]
+        },
+        options: {
+            scales: {
+                x: { type:'linear', position:'top', title:{display:true, text:'Normal stress σ₀ (MN/m²)'} },
+                y: { reverse:true, title:{display:true, text:'Corrected settlement s* (mm)'} }
+            }
+        }
+    });
+}
+/* ===================== SECTION 3: Print / Save / Restore (with file naming) ===================== */
+function getDinReportName(purpose) {
+    const suggested = (document.getElementById('din_project')?.value || 'DIN18134_Report').trim().replace(/\s+/g, '_');
+    const name = prompt(purpose === 'print' ? 'اسم التقرير (سيُستخدم كعنوان عند الطباعة / الحفظ كـ PDF):' : 'اسم ملف الحفظ:', suggested);
+    return name; // null if user cancels
+}
+
+/* ===================== SECTION 4: Trial / example dataset (from DIN 18134 Annex, Clause 9.1 & 9.2) ===================== */
+function loadDinExample() {
+    if (!confirm('سيتم تحميل بيانات المثال الرسمي من ملحق المواصفة (البند 9.1 و 9.2) واستبدال البيانات الحالية. متابعة؟')) return;
+
+    document.getElementById('din_project').value = 'مثال تجريبي - DIN 18134 Annex';
+    document.getElementById('din_testno').value = 'Test DIN 18134 — 300 (Clause 9.1)';
+    document.getElementById('din_dia').value = '300';
+    updateDinPlateInfo();
+
+    const fill = (tableId, rows) => {
+        const body = document.getElementById(tableId).querySelector('tbody');
+        body.innerHTML = '';
+        rows.forEach(r => {
+            addDinRow(tableId);
+            const tr = body.lastElementChild;
+            const ins = tr.querySelectorAll('input');
+            ins[0].value = r[0];
+            ins[1].value = r[1];
+        });
+        renumberStages(tableId);
+    };
+
+    // Table 2 (first loading cycle, stages 0-6) — [sigma0 MN/m2, settlement mm]
+    fill('dinTable1', [
+        [0.010, 0], [0.080, 1.15], [0.160, 2.09], [0.250, 2.87],
+        [0.330, 3.25], [0.420, 3.80], [0.500, 4.21]
+    ]);
+    // Table 2 (unloading, stages 7-9)
+    fill('dinTableUnload', [
+        [0.250, 3.96], [0.125, 3.71], [0.010, 2.59]
+    ]);
+    // Table 3 (second loading cycle, stages 9-14)
+    fill('dinTable2', [
+        [0.010, 2.59], [0.080, 3.23], [0.160, 3.53],
+        [0.250, 3.79], [0.330, 3.99], [0.420, 4.13]
+    ]);
+    // Table 5 (ks example, 762 mm plate, Clause 9.2)
+    fill('dinTableKs', [
+        [0.010, 0], [0.040, 0.31], [0.080, 0.56], [0.140, 0.97],
+        [0.200, 2.53], [0.080, 1.16], [0.000, 0.57]
+    ]);
+    document.getElementById('ks_origin_correction').value = 0;
+
+    calcDIN();
+    calcDinKs();
+    alert('✅ تم تحميل بيانات المثال! النتائج المتوقعة حسب المواصفة: Ev1≈29.0 MN/m²، Ev2≈77.7 MN/m²، النسبة≈2.68.\nلمعامل رد الفعل ks: عدّل "تصحيح نقطة الأصل" (Origin Correction) بيانياً من الرسم حتى تحصل على القيمة المرجعية 148.8 MN/m³ كما في المثال (البند 9.2)، لأن التصحيح الأصلي يُحدَّد بيانياً على المنحنى.');
+}
+
+/* ===================== SECTION 5: Report Builder (customize the report before printing) ===================== */
+let rbBlocks = []; // {id, title, bodyHtml}
+let rbCounter = 0;
+
+function rbNextId() { return 'rbBlock_' + (++rbCounter); }
+
+function rbTableHtml(headers, rows) {
+    let thead = '<thead><tr>' + headers.map(h => `<th>${h}</th>`).join('') + `<th class="rb-only no-print">-</th></tr></thead>`;
+    let tbody = '<tbody>' + rows.map(r => {
+        let cells = r.map(c => `<td contenteditable="true">${c}</td>`).join('');
+        return `<tr>${cells}<td class="rb-only no-print"><button class="rb-del-row" onclick="this.closest('tr').remove()">🗑</button></td></tr>`;
+    }).join('') + '</tbody>';
+    return `<table class="rb-table">${thead}${tbody}</table>`;
+}
+
+function rbGetTableData(tableId) {
+    const rows = [];
+    document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+        const ins = tr.querySelectorAll('input');
+        rows.push([ins[0].value || '-', ins[1].value || '-']);
+    });
+    return rows;
+}
+
+function buildDinReportBlocks() {
+    // Make sure results/charts are up to date before snapshotting
+    calcDIN();
+    calcDinKs();
+
+    const blocks = [];
+    const projectRows = [
+        ['Project', document.getElementById('din_project').value, 'Date', document.getElementById('din_date').value],
+        ['Client', document.getElementById('din_client').value, 'Test No.', document.getElementById('din_testno').value],
+        ['Soil Type', document.getElementById('din_soiltype').value, 'Bedding Material', document.getElementById('din_bedding').value],
+        ['Weather/Temp.', document.getElementById('din_weather').value, 'Tested By', document.getElementById('din_testedby').value]
+    ];
+    blocks.push({ id: rbNextId(), title: '📋 بيانات المشروع', bodyHtml:
+        '<table class="rb-table">' + projectRows.map(r => `<tr><th contenteditable="true">${r[0]}</th><td contenteditable="true">${r[1]||''}</td><th contenteditable="true">${r[2]}</th><td contenteditable="true">${r[3]||''}</td></tr>`).join('') + '</table>'
+    });
+
+    blocks.push({ id: rbNextId(), title: '🔧 بيانات اللوح — Ev', bodyHtml:
+        `<p contenteditable="true"><b>${document.getElementById('din_designation').innerText}</b> — Radius: ${document.getElementById('din_rad').innerText} mm</p>
+         <p contenteditable="true" style="font-size:11px;">${document.getElementById('din_guidance').innerText}</p>`
+    });
+
+    blocks.push({ id: rbNextId(), title: '1️⃣ الحمل الأول — 1st Loading Cycle', bodyHtml:
+        rbTableHtml(['Stage', 'σ₀ (MN/m²)', 's (mm)'], rbGetTableData('dinTable1').map((r,i)=>[i, r[0], r[1]]))
+    });
+    blocks.push({ id: rbNextId(), title: '↩️ التفريغ — Unloading', bodyHtml:
+        rbTableHtml(['Stage', 'σ₀ (MN/m²)', 's (mm)'], rbGetTableData('dinTableUnload').map((r,i)=>[i+7, r[0], r[1]]))
+    });
+    blocks.push({ id: rbNextId(), title: '2️⃣ الحمل الثاني — 2nd Loading Cycle', bodyHtml:
+        rbTableHtml(['Stage', 'σ₀ (MN/m²)', 's (mm)'], rbGetTableData('dinTable2').map((r,i)=>[i+9, r[0], r[1]]))
+    });
+
+    blocks.push({ id: rbNextId(), title: '📊 نتائج Ev', bodyHtml:
+        `<table class="rb-table">
+            <tr><th contenteditable="true">σ₀max</th><td contenteditable="true">${document.getElementById('res_sigmax').innerText}</td>
+                <th contenteditable="true">Ev1</th><td contenteditable="true">${document.getElementById('res_ev1').innerText}</td></tr>
+            <tr><th contenteditable="true">Ev2</th><td contenteditable="true">${document.getElementById('res_ev2').innerText}</td>
+                <th contenteditable="true">Ev2/Ev1</th><td contenteditable="true">${document.getElementById('res_ratio').innerText}</td></tr>
+         </table>
+         ${document.getElementById('dinResultsTable').outerHTML}`
+    });
+
+    if (chartDIN_Obj) {
+        blocks.push({ id: rbNextId(), title: '📈 منحنى الحمل-الهبوط — Ev', bodyHtml:
+            `<img src="${chartDIN_Obj.toBase64Image()}" style="max-width:100%;">`
+        });
+    }
+
+    blocks.push({ id: rbNextId(), title: '🔧 بيانات اللوح — ks (762mm)', bodyHtml:
+        `<p contenteditable="true">قطر اللوح: 762 مم (إلزامي حسب البند 7.5.3) — Test DIN 18134 — 762</p>`
+    });
+    blocks.push({ id: rbNextId(), title: '📋 قراءات معامل رد الفعل — ks', bodyHtml:
+        rbTableHtml(['Stage', 'σ₀ (MN/m²)', 's (mm)'], rbGetTableData('dinTableKs').map((r,i)=>[i, r[0], r[1]]))
+    });
+    blocks.push({ id: rbNextId(), title: '📊 نتيجة ks', bodyHtml:
+        `<table class="rb-table">
+            <tr><th contenteditable="true">σ₀ @ s*=1.25mm</th><td contenteditable="true">${document.getElementById('res_ks_sigma').innerText}</td>
+                <th contenteditable="true">ks</th><td contenteditable="true">${document.getElementById('res_ks').innerText}</td></tr>
+         </table>`
+    });
+
+    if (chartDinKs_Obj) {
+        blocks.push({ id: rbNextId(), title: '📈 منحنى الحمل-الهبوط — ks', bodyHtml:
+            `<img src="${chartDinKs_Obj.toBase64Image()}" style="max-width:100%;">`
+        });
+    }
+
+    blocks.push({ id: rbNextId(), title: '✍️ التذييل', bodyHtml:
+        `<p contenteditable="true" style="text-align:center;">إعداد وتطوير: م/ محمد أحمد القصبي</p>`
+    });
+
+    return blocks;
+}
+
+function renderReportBuilder() {
+    const container = document.getElementById('rbBlocksContainer');
+    container.innerHTML = '';
+    rbBlocks.forEach(block => {
+        const div = document.createElement('div');
+        div.className = 'rb-block';
+        div.id = block.id;
+        div.dataset.fontSize = '12';
+        div.innerHTML = `
+            <div class="rb-block-header">
+                <span class="rb-block-title">${block.title}</span>
+                <div class="rb-block-controls">
+                    <button class="rb-icon-btn" onclick="rbMoveBlock('${block.id}', -1)" title="تحريك لأعلى">⬆</button>
+                    <button class="rb-icon-btn" onclick="rbMoveBlock('${block.id}', 1)" title="تحريك لأسفل">⬇</button>
+                    <button class="rb-icon-btn" onclick="rbResizeBlock('${block.id}', -1)" title="تصغير">A-</button>
+                    <button class="rb-icon-btn" onclick="rbResizeBlock('${block.id}', 1)" title="تكبير">A+</button>
+                    <button class="rb-icon-btn danger" onclick="rbDeleteBlock('${block.id}')" title="حذف هذا القسم بالكامل">🗑</button>
+                </div>
+            </div>
+            <div class="rb-block-body" contenteditable="true">${block.bodyHtml}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function rbMoveBlock(id, dir) {
+    const idx = rbBlocks.findIndex(b => b.id === id);
+    const newIdx = idx + dir;
+    if (idx < 0 || newIdx < 0 || newIdx >= rbBlocks.length) return;
+    [rbBlocks[idx], rbBlocks[newIdx]] = [rbBlocks[newIdx], rbBlocks[idx]];
+    // Preserve current edited content before re-render
+    rbSyncEditsIntoModel();
+    renderReportBuilder();
+}
+
+function rbResizeBlock(id, dir) {
+    const div = document.getElementById(id);
+    if (!div) return;
+    let size = parseInt(div.dataset.fontSize || '12', 10);
+    size = Math.min(22, Math.max(9, size + dir));
+    div.dataset.fontSize = size;
+    div.querySelectorAll('table, th, td, p').forEach(el => el.style.fontSize = size + 'px');
+}
+
+function rbDeleteBlock(id) {
+    if (!confirm('حذف هذا القسم من التقرير النهائي؟')) return;
+    rbSyncEditsIntoModel();
+    rbBlocks = rbBlocks.filter(b => b.id !== id);
+    renderReportBuilder();
+}
+
+/* Save any live edits (contenteditable text / deleted rows) back into rbBlocks before reordering/re-render */
+function rbSyncEditsIntoModel() {
+    rbBlocks.forEach(block => {
+        const div = document.getElementById(block.id);
+        if (div) {
+            const body = div.querySelector('.rb-block-body');
+            if (body) block.bodyHtml = body.innerHTML;
+        }
+    });
+}
+
+function openReportBuilder() {
+    rbBlocks = buildDinReportBlocks();
+    renderReportBuilder();
+    document.getElementById('reportBuilderOverlay').classList.add('active');
+}
+
+function reloadReportBuilder() {
+    if (!confirm('إعادة التحميل ستفقد كل التعديلات اليدوية داخل هذا التقرير (الترتيب/الحذف/التحرير). متابعة؟')) return;
+    openReportBuilder();
+}
+
+function closeReportBuilder() {
+    document.getElementById('reportBuilderOverlay').classList.remove('active');
+}
+
+function printCustomReport() {
+    rbSyncEditsIntoModel();
+    if (rbBlocks.length === 0) { alert('لا توجد أقسام لطباعتها!'); return; }
+
+    const name = getDinReportName('print');
+    if (name === null) return; // cancelled
+
+    const area = document.getElementById('dinPrintCustomArea');
+    area.innerHTML = rbBlocks.map(b => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = b.bodyHtml;
+        wrapper.querySelectorAll('.rb-only').forEach(el => el.remove());
+        wrapper.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+        return `<div class="section-title">${b.title}</div><div style="margin-bottom:15px;">${wrapper.innerHTML}</div>`;
+    }).join('');
+
+    closeReportBuilder();
+
+    const prevTitle = document.title;
+    document.title = name || prevTitle;
+    document.body.classList.add('din-custom-print');
+
+    const cleanup = () => {
+        document.title = prevTitle;
+        document.body.classList.remove('din-custom-print');
+        window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+}
+
+function collectDinTableRows(tableId) {
+    const rows = [];
+    document.querySelectorAll(`#${tableId} tbody tr`).forEach(tr => {
+        const ins = tr.querySelectorAll('input');
+        rows.push({ sigma: ins[0].value, settlement: ins[1].value });
+    });
+    return rows;
+}
+
+function saveDinData() {
+    const name = getDinReportName('save');
+    if (name === null) return; // user cancelled
+    const fileName = (name || 'DIN18134_Data').trim().replace(/\s+/g, '_');
+
+    const data = {
+        meta: { standard: 'DIN 18134', savedAt: new Date().toISOString(), reportName: name },
+        project: {
+            project: document.getElementById('din_project').value,
+            date: document.getElementById('din_date').value,
+            client: document.getElementById('din_client').value,
+            testNo: document.getElementById('din_testno').value,
+            soilType: document.getElementById('din_soiltype').value,
+            bedding: document.getElementById('din_bedding').value,
+            weather: document.getElementById('din_weather').value,
+            testedBy: document.getElementById('din_testedby').value
+        },
+        diameter: document.getElementById('din_dia').value,
+        tables: {
+            dinTable1: collectDinTableRows('dinTable1'),
+            dinTableUnload: collectDinTableRows('dinTableUnload'),
+            dinTable2: collectDinTableRows('dinTable2'),
+            dinTableKs: collectDinTableRows('dinTableKs')
+        },
+        ksOriginCorrection: document.getElementById('ks_origin_correction').value
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('✅ تم حفظ الملف: ' + fileName + '.json');
+}
+
+function loadDinData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        let data;
+        try { data = JSON.parse(e.target.result); }
+        catch(err) { alert('❌ ملف غير صالح!'); return; }
+        if (!data.tables) { alert('❌ الملف لا يحتوي على بيانات DIN 18134 صالحة!'); return; }
+        if (!confirm('استرجاع البيانات من الملف؟ (سيتم استبدال البيانات الحالية)')) return;
+
+        const p = data.project || {};
+        document.getElementById('din_project').value = p.project || '';
+        document.getElementById('din_date').value = p.date || '';
+        document.getElementById('din_client').value = p.client || '';
+        document.getElementById('din_testno').value = p.testNo || '';
+        document.getElementById('din_soiltype').value = p.soilType || '';
+        document.getElementById('din_bedding').value = p.bedding || '';
+        document.getElementById('din_weather').value = p.weather || '';
+        document.getElementById('din_testedby').value = p.testedBy || '';
+
+        if (data.diameter) { document.getElementById('din_dia').value = data.diameter; updateDinPlateInfo(); }
+
+        const restoreTable = (tableId, rows) => {
+            const body = document.getElementById(tableId).querySelector('tbody');
+            body.innerHTML = '';
+            (rows || []).forEach(r => {
+                addDinRow(tableId);
+                const tr = body.lastElementChild;
+                const ins = tr.querySelectorAll('input');
+                ins[0].value = r.sigma ?? '';
+                ins[1].value = r.settlement ?? '';
+            });
+            renumberStages(tableId);
+        };
+        restoreTable('dinTable1', data.tables.dinTable1);
+        restoreTable('dinTableUnload', data.tables.dinTableUnload);
+        restoreTable('dinTable2', data.tables.dinTable2);
+        restoreTable('dinTableKs', data.tables.dinTableKs);
+
+        if (data.ksOriginCorrection !== undefined) document.getElementById('ks_origin_correction').value = data.ksOriginCorrection;
+
+        calcDIN();
+        calcDinKs();
+        alert('✅ تم استرجاع البيانات بنجاح!');
+        event.target.value = '';
+    };
+    reader.readAsText(file);
+}
 </script>
 </body>
 </html>
-
-
-
-
